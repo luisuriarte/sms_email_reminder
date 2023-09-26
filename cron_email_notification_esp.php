@@ -43,7 +43,7 @@ if (php_sapi_name() === 'cli') {
 require_once(__DIR__ . "/../../interface/globals.php");
 require_once(__DIR__ . "/../../library/appointments.inc.php");
 require_once(__DIR__ . "/../../library/patient_tracker.inc.php");
-require_once("cron_functions.php");
+require_once("cron_functions_esp.php");
 
 // check command line for quite option
 $bTestRun = isset($_REQUEST['dryrun']) ? 1 : 0;

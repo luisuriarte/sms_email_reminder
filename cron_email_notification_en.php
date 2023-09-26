@@ -1,21 +1,16 @@
 <?php
 
-/*
+/**
  * Purpose: to be run by cron every hour, look for appointments
  * in the pre-notification period and send an email reminder
  *
  * @package OpenEMR
  * @author Larry Lart
  * @copyright Copyright (c) 2008 Larry Lart
- * @copyright Copyright (c) 2023 Luis A. Uriarte <luis.uriarte@gmail.com>
+ * @copyright Copyright (c) 2022 Luis A. Uriarte <luis.uriarte@gmail.com>
  * @link https://www.open-emr.org
  * @license https://github.com/openemr/openemr/blob/master/LICENSE GNU General Public License 3
  */
-
-// comment below exit if plan to use this script
-//exit;
-
-setlocale(LC_ALL,'es-ES', 'Spanish_Spain', 'Spanish' );
 
 if (php_sapi_name() !== 'cli') {
     exit;
@@ -48,7 +43,7 @@ if (php_sapi_name() === 'cli') {
 require_once(__DIR__ . "/../../interface/globals.php");
 require_once(__DIR__ . "/../../library/appointments.inc.php");
 require_once(__DIR__ . "/../../library/patient_tracker.inc.php");
-require_once("cron_wsp_functions.php");
+require_once("cron_functions_en.php");
 
 // check command line for quite option
 $bTestRun = isset($_REQUEST['dryrun']) ? 1 : 0;
@@ -56,75 +51,57 @@ if ($argc > 1 && $argv[2] == 'test') {
     $bTestRun = 1;
 }
 
-$TYPE = "SMS";
+$TYPE = "Email";
 $CRON_TIME = 5;
 
-$curr_date = date("Y-m-d");
-$curr_time = time();
-$check_date = date("Y-m-d", mktime(date("h") + $SMS_NOTIFICATION_HOUR, 0, 0, date("m"), date("d"), date("Y")));
+// set cron time (time to event ?) - todo extra tests
+$vectNotificationSettings = cron_GetNotificationSettings();
+$CRON_TIME = $vectNotificationSettings['Send_Email_Before_Hours'];
 
-// larry :: move this in the loop to keep it fresh - perhaps try to use it without change
-// it's content - to do latter
+// get data from automatic_notification table
 $db_email_msg = cron_getNotificationData($TYPE);
 
-// get notification settings
-$vectNotificationSettings = cron_GetNotificationSettings();
-$SMS_GATEWAY_USENAME = $vectNotificationSettings['SMS_gateway_username'];
-$SMS_GATEWAY_PASSWORD = $vectNotificationSettings['SMS_gateway_password'];
-$SMS_GATEWAY_APIKEY = $vectNotificationSettings['SMS_gateway_apikey'];
-// set cron time (time to event ?) - todo extra tests
-$CRON_TIME = $vectNotificationSettings['Send_SMS_Before_Hours'];
-
-// create sms object
-//$mysms = new sms($SMS_GATEWAY_USENAME, $SMS_GATEWAY_PASSWORD, $SMS_GATEWAY_APIKEY);
-
+// get patient data for send alert
 $db_patient = cron_getAlertpatientData($TYPE);
-echo "\n<br />Total " . text(count($db_patient)) . " Records Found";
-
-// for every event found
+echo "<br />Total " . count($db_patient) . " Records Found\n";
 for ($p = 0; $p < count($db_patient); $p++) {
     $prow = $db_patient[$p];
 
     $app_date = $prow['pc_eventDate'] . " " . $prow['pc_startTime'];
     $app_time = strtotime($app_date);
+    $eid = $prow['pc_eid'];
+    $pid = $prow['pid'];
 
     $app_time_hour = round($app_time / 3600);
     $curr_total_hour = round(time() / 3600);
 
     $remaining_app_hour = round($app_time_hour - $curr_total_hour);
-    $remain_hour = round($remaining_app_hour - $SMS_NOTIFICATION_HOUR);
+    $remain_hour = round($remaining_app_hour - $EMAIL_NOTIFICATION_HOUR);
 
-    // build log message
     $strMsg = "\n========================" . $TYPE . " || " . date("Y-m-d H:i:s") . "=========================";
-    $strMsg .= "\nSEND NOTIFICATION BEFORE:" . $SMS_NOTIFICATION_HOUR . " || CRONJOB RUN EVERY:" . $CRON_TIME . " || APPDATETIME:" . $app_date . " || REMAINING APP HOUR:" . ($remaining_app_hour) . " || SEND ALERT AFTER:" . ($remain_hour);
+    $strMsg .= "\nSEND NOTIFICATION BEFORE:" . $EMAIL_NOTIFICATION_HOUR . " || CRONJOB RUN EVERY:" . $CRON_TIME . " || APPDATETIME:" . $app_date . " || REMAINING APP HOUR:" . ($remaining_app_hour) . " || SEND ALERT AFTER:" . ($remain_hour);
 
-    // check in the interval
     if ($remain_hour >= -($CRON_TIME) &&  $remain_hour <= $CRON_TIME) {
-        // insert entry in notification_log table
-        cron_InsertNotificationLogEntry($TYPE, $prow, $db_email_msg);
-
         //set message
         $db_email_msg['message'] = cron_setmessage($prow, $db_email_msg);
-
-        // send sms to patinet - if not in test mode
-        if ($bTestRun == 0) {
-            cron_SendWSP(
-                $prow['phone_cell'],
-                $db_email_msg['message']
-            );
-        }
-
-        //update entry >> pc_sendalertsms='Yes'
+        // send mail to patinet
+        cron_SendMail(
+            $prow['email'],
+            $prow['email_direct'],
+            $db_email_msg['email_subject'],
+            $db_email_msg['message']
+        );
+        // insert entry in notification_log table
+        cron_InsertNotificationLogEntry($TYPE, $prow, $db_email_msg);
+        //update entry >> pc_sendalertemail='Yes'
         cron_updateentry($TYPE, $prow['pid'], $prow['pc_eid']);
-
-        $strMsg .= " || ALERT SENT SUCCESSFULLY TO " . $prow['phone_cell'];
+        // Update patient_tracker table and insert a row in patient_tracker_element table
+        manage_tracker_status($prow['pc_eventDate'], $prow['pc_startTime'], $eid, $pid, $user = 'System', $status = 'EMAIL', $room = '', $enc_id = '');
+        $strMsg .= " || ALERT SENT SUCCESSFULLY TO " . $prow['email'];
         $strMsg .= "\n" . $patient_info . "\n" . $smsgateway_info . "\n" . $data_info . "\n" . $db_email_msg['message'];
     }
-
-    // write logs for every reminder sent
     WriteLog($strMsg);
-
-    // larry :: update notification data again - todo :: fix change in cron_updateentry
+    // larry :: get notification data again - since was updated by cron_updateentry
     $db_email_msg = cron_getNotificationData($TYPE);
 }
 
@@ -132,7 +109,7 @@ for ($p = 0; $p < count($db_patient); $p++) {
 
 <html>
 <head>
-<title>Cronjob - Notificación por WhatsApp</title>
+<title>Cronjob - Email Notification</title>
 </head>
 <body>
     <center>
