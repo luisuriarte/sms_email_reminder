@@ -1,16 +1,16 @@
 <?php
 
 /**
-    * Purpose: to be run by cron every hour, look for appointments
-     * in the pre-notification period and send an email reminder
-    *
-    * @package OpenEMR
-    * @author Larry Lart
-    * @copyright Copyright (c) 2008 Larry Lart
-    * @copyright Copyright (c) 2022 Luis A. Uriarte <luis.uriarte@gmail.com>
-    * @link https://www.open-emr.org
-    * @license https://github.com/openemr/openemr/blob/master/LICENSE GNU General Public License 3
-**/
+ * Purpose: to be run by cron every hour, look for appointments
+ * in the pre-notification period and send an email reminder
+ *
+ * @package     OpenEMR
+ * @author      Larry Lart
+ * @copyright   Copyright (c) 2008 Larry Lart
+ * @copyright   Copyright (c) 2022 Luis A. Uriarte <luis.uriarte@gmail.com>
+ * @link        https://www.open-emr.org
+ * @license     https://github.com/openemr/openemr/blob/master/LICENSE GNU General Public License 3
+ */
 
 if (php_sapi_name() !== 'cli') {
     exit;
