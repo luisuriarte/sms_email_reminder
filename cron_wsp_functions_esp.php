@@ -19,6 +19,10 @@ global $data_info;
 global $SMS_NOTIFICATION_HOUR;
 global $EMAIL_NOTIFICATION_HOUR;
 
+function dateToCal($timestamp) {
+    return date('Ymd\THis', strtotime($timestamp));
+}
+
 
 ////////////////////////////////////////////////////////////////////
 // Function:    WriteLog
@@ -60,10 +64,43 @@ if (!function_exists('my_print_r')) {
 // Function:    cron_SendWSP
 // Purpose: send WhatsApp
 ////////////////////////////////////////////////////////////////////
-function cron_SendWSP($to, $vBody)
+function cron_SendWSP($to, $vBody, $start_date, $end_date)
 {
     $INSTANCIA = $GLOBALS['SMS_GATEWAY_USENAME'];
     $APIKEY = $GLOBALS['SMS_GATEWAY_APIKEY'];
+    $todaystamp = gmdate("Ymd\THis\Z");
+	
+    //Create unique identifier
+    $cal_uid = date('Ymd').'T'.date('His')."-".rand()."@origen.ar";
+
+    //Create ICAL Content (Google rfc 2445 for details and examples of usage)
+    $ical_content = 'BEGIN:VCALENDAR
+PRODID:-//Microsoft Corporation//Outlook 11.0 MIMEDIR//EN
+VERSION:2.0
+BEGIN:VEVENT
+ORGANIZER:MAILTO:' . $SenderEmail . '
+DTSTART;TZID=America/Argentina/Buenos_Aires:' . dateToCal($start_date) . '
+DTEND;TZID=America/Argentina/Buenos_Aires:' . dateToCal($end_date) . '
+LOCATION:Rivadavia 1156, San Carlos Centro, Santa Fe
+TRANSP:OPAQUE
+SEQUENCE:0
+UID:' . $cal_uid . '
+ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;CN='.$to.':mailto:'.$to.'
+DTSTAMP:' . $todaystamp . '
+Schedule Kick-off meeting
+X-ALT-DESC;FMTTYPE=text/html:<html><head></head><body><h2>¿Donde?</h2><p><strong>Turno en Nuestra Clínica</strong></p></body></html>
+SUMMARY:Turno en Clínica Comunitaria
+URL: https://salud.origen.ar
+PRIORITY:5
+CLASS:PUBLIC
+END:VEVENT
+END:VCALENDAR';
+    $html = <<<EOT
+        <div>
+            <img src="cid:logo"> 
+            <p><b><i><big>$vBody</big></i></b></p>
+        </div>
+        EOT;
 
     $params = array(
         'token' => $APIKEY,

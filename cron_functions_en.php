@@ -23,6 +23,10 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 use OpenEMR\Common\Crypto\CryptoGen;
 
+function dateToCal($timestamp) {
+    return date('Ymd\THis', strtotime($timestamp));
+}
+
 ////////////////////////////////////////////////////////////////////
 // Function:    cron_SendMail
 // Purpose: send mail
@@ -30,7 +34,7 @@ use OpenEMR\Common\Crypto\CryptoGen;
 // Output:  status - if sent or not
 ////////////////////////////////////////////////////////////////////
 
-function cron_SendMail($to, $cc, $subject, $vBody)
+function cron_SendMail($to, $cc, $subject, $vBody, $start_date, $end_date)
 {
     // check if smtp globals set
     if ($GLOBALS['SMTP_HOST'] == '') {
@@ -39,6 +43,34 @@ function cron_SendMail($to, $cc, $subject, $vBody)
     } else {
         $SenderName = $GLOBALS['patient_reminder_sender_name'];
         $SenderEmail = $GLOBALS['patient_reminder_sender_email'];
+        $todaystamp = gmdate("Ymd\THis\Z");
+	
+		//Create unique identifier
+		$cal_uid = date('Ymd').'T'.date('His')."-".rand()."@origen.ar";
+
+		//Create ICAL Content (Google rfc 2445 for details and examples of usage)
+		$ical_content = 'BEGIN:VCALENDAR
+PRODID:-//Microsoft Corporation//Outlook 11.0 MIMEDIR//EN
+VERSION:2.0
+BEGIN:VEVENT
+ORGANIZER:MAILTO:' . $SenderEmail . '
+DTSTART;TZID=America/Argentina/Buenos_Aires:' . dateToCal($start_date) . '
+DTEND;TZID=America/Argentina/Buenos_Aires:' . dateToCal($end_date) . '
+LOCATION:Rivadavia 1156, San Carlos Centro, Santa Fe
+TRANSP:OPAQUE
+SEQUENCE:0
+UID:' . $cal_uid . '
+ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;CN='.$to.':mailto:'.$to.'
+DTSTAMP:' . $todaystamp . '
+Schedule Kick-off meeting
+X-ALT-DESC;FMTTYPE=text/html:<html><head></head><body><h2>¿Donde?</h2><p><strong>Turno en Nuestra Clínica</strong></p></body></html>
+SUMMARY:Turno en Clínica Comunitaria
+URL: https://salud.origen.ar
+PRIORITY:5
+CLASS:PUBLIC
+END:VEVENT
+END:VCALENDAR';
+
         $mail = new PHPMailer();
         $mail->SMTPDebug = 3;
         $mail->IsSMTP();
@@ -57,7 +89,15 @@ function cron_SendMail($to, $cc, $subject, $vBody)
         $mail->WordWrap = 50;
         $mail->IsHTML(true);
         $mail->Subject = $subject;
-        $mail->Body = $vBody;
+		$mail->AddEmbeddedImage("logo.png", "logo", "logo.png");
+		$html = <<<EOT
+			<div>
+				<img src="cid:logo"> 
+				<p><b><i><big>$vBody</big></i></b></p>
+			</div>
+		EOT;
+		$mail->Body = $html;
+		$mail->AddStringAttachment($ical_content, "ical.ics", "base64", "text/calendar; charset=utf-8; method=REQUEST");
         if (!$mail->send()) {
             echo "Cound not send the message to " . text($to) . ".\nError: " . text($mail->ErrorInfo) . "\n";
             $mstatus = false;

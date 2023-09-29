@@ -86,6 +86,7 @@ for ($p = 0; $p < count($db_patient); $p++) {
     $prow = $db_patient[$p];
 
     $app_date = $prow['pc_eventDate'] . " " . $prow['pc_startTime'];
+    $app_end_date = $prow['pc_eventDate'] . " " . $prow['pc_endTime'];
     $app_time = strtotime($app_date);
 
     $app_time_hour = round($app_time / 3600);
@@ -111,6 +112,8 @@ for ($p = 0; $p < count($db_patient); $p++) {
             cron_SendWSP(
                 $prow['phone_cell'],
                 $db_email_msg['message']
+                $app_date,
+			    $app_end_date
             );
         }
 

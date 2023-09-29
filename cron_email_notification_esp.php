@@ -70,6 +70,7 @@ for ($p = 0; $p < count($db_patient); $p++) {
     $prow = $db_patient[$p];
         
     $app_date = $prow['pc_eventDate'] . " " . $prow['pc_startTime'];
+    $app_end_date = $prow['pc_eventDate'] . " " . $prow['pc_endTime'];
     $app_time = strtotime($app_date);
     $eid = $prow['pc_eid'];
     $pid = $prow['pid'];
@@ -93,7 +94,9 @@ for ($p = 0; $p < count($db_patient); $p++) {
             $prow['email'],
             $prow['email_direct'],
             $db_email_msg['email_subject'],
-            $db_email_msg['message']
+            $db_email_msg['message'],
+            $app_date,
+			$app_end_date
         );
 
         // insert entry in notification_log table

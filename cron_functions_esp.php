@@ -19,6 +19,10 @@ global $data_info;
 global $SMS_NOTIFICATION_HOUR;
 global $EMAIL_NOTIFICATION_HOUR;
 
+function dateToCal($timestamp) {
+    return date('Ymd\THis', strtotime($timestamp));
+}
+
 //require_once("../../globals.php");
 ////////////////////////////////////////////////////////////////////
 // Function:    cron_SendMail
@@ -51,6 +55,34 @@ function cron_SendMail($to, $cc, $subject, $vBody)
 		    require (__DIR__ . "/../../library/classes/PHPMailer/src/SMTP.php");
 		}
         }
+
+        $todaystamp = gmdate("Ymd\THis\Z");
+	
+		//Create unique identifier
+		$cal_uid = date('Ymd').'T'.date('His')."-".rand()."@origen.ar";
+
+		//Create ICAL Content (Google rfc 2445 for details and examples of usage)
+		$ical_content = 'BEGIN:VCALENDAR
+PRODID:-//Microsoft Corporation//Outlook 11.0 MIMEDIR//EN
+VERSION:2.0
+BEGIN:VEVENT
+ORGANIZER:MAILTO:' . $SenderEmail . '
+DTSTART;TZID=America/Argentina/Buenos_Aires:' . dateToCal($start_date) . '
+DTEND;TZID=America/Argentina/Buenos_Aires:' . dateToCal($end_date) . '
+LOCATION:Rivadavia 1156, San Carlos Centro, Santa Fe
+TRANSP:OPAQUE
+SEQUENCE:0
+UID:' . $cal_uid . '
+ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;CN='.$to.':mailto:'.$to.'
+DTSTAMP:' . $todaystamp . '
+Schedule Kick-off meeting
+X-ALT-DESC;FMTTYPE=text/html:<html><head></head><body><h2>¿Donde?</h2><p><strong>Turno en Nuestra Clínica</strong></p></body></html>
+SUMMARY:Turno en Clínica Comunitaria
+URL: https://salud.origen.ar
+PRIORITY:5
+CLASS:PUBLIC
+END:VEVENT
+END:VCALENDAR';
  		
     	$mail = new PHPMailer();
 		$mail->SMTPDebug = 3;
@@ -70,7 +102,15 @@ function cron_SendMail($to, $cc, $subject, $vBody)
 		$mail->WordWrap = 50;
 		$mail->IsHTML(true);
 		$mail->Subject = $subject;
-		$mail->Body = $vBody;
+		$mail->AddEmbeddedImage("logo.png", "logo", "logo.png");
+		$html = <<<EOT
+			<div>
+				<img src="cid:logo"> 
+				<p><b><i><big>$vBody</big></i></b></p>
+			</div>
+		EOT;
+		$mail->Body = $html;
+		$mail->AddStringAttachment($ical_content, "ical.ics", "base64", "text/calendar; charset=utf-8; method=REQUEST");
 		if(!$mail->send()) {
             echo "No se puede enviar mensaje a " . text($to) . ".\nError: " . text($mail->ErrorInfo) . "\n";
             $mstatus = false;
@@ -259,9 +299,9 @@ function cron_setmessage($prow, $db_email_msg)
     
     $PROVIDER = $prow['user_name'];
     $dtWrk = strtotime($prow['pc_eventDate'] . ' ' . $prow['pc_startTime']);
-	$dias = array("Domingo","Lunes","Martes","Miercoles","Jueves","Viernes","Sábado");
-	$meses = array("Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre");
-	$DATE = $dias[date('w',$dtWrk)]." ".date('d',$dtWrk)." de ".$meses[date('n',$dtWrk)-1]. " del ".date('Y',$dtWrk) ;
+    $dias = array("Domingo" , "Lunes" , "Martes" , "Miercoles" , "Jueves" , "Viernes" , "Sábado");
+    $meses = array("Enero" , "Febrero" , "Marzo" , "Abril" , "Mayo" , "Junio" , "Julio" , "Agosto" , "Septiembre" , "Octubre" , "Noviembre" , "Diciembre");
+    $DATE = $dias[date('w' , $dtWrk)]." ".date('d' , $dtWrk)." de ".$meses[date('n' , $dtWrk)-1]. " del ".date('Y' , $dtWrk) ;
     $STARTTIME = date("h:i A", $dtWrk);
     $ENDTIME = $prow['pc_endTime'];
     $find_array = array('***NAME***' , '***PROVIDER***' , '***DATE***' , '***STARTTIME***' , '***ENDTIME***');
