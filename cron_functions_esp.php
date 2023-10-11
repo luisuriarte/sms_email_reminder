@@ -73,12 +73,12 @@ LOCATION:Rivadavia 1156, San Carlos Centro, Santa Fe
 TRANSP:OPAQUE
 SEQUENCE:0
 UID:' . $cal_uid . '
-ORGANIZER;"CN=Clínica":mailto:' . $SenderEmail . '
-ATTENDEE;PARTSTAT=ACCEPTED;CN=' . $patientname . ';EMAIL=' . $to . ':MAILTO:' . $to . '
+ORGANIZER;CN=Clínica:mailto:' . $SenderEmail . '
+ATTENDEE;PARTSTAT=ACCEPTED;CN=' . $patientname . ';EMAIL=' . $to . ':mailto:' . $to . '
 DTSTAMP:' . $todaystamp . '
-DESCRIPTION:' . $vBody . '
 SUMMARY:Turno en Clínica Comunitaria
-URL;VALUE=URI:https://salud.origen.ar
+DESCRIPTION:' . $vBody . '
+URL:https://salud.origen.ar
 PRIORITY:5
 CLASS:PUBLIC
 END:VEVENT
