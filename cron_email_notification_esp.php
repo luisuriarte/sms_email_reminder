@@ -96,7 +96,7 @@ for ($p = 0; $p < count($db_patient); $p++) {
             $db_email_msg['email_subject'],
             $db_email_msg['message'],
             $app_date,
-			$app_end_date,
+            $app_end_date,
             $patientname
         );
 

@@ -76,7 +76,7 @@ UID:' . $cal_uid . '
 ORGANIZER;"CN=Clínica":mailto:' . $SenderEmail . '
 ATTENDEE;PARTSTAT=ACCEPTED;CN=' . $patientname . ';EMAIL=' . $to . ':MAILTO:' . $to . '
 DTSTAMP:' . $todaystamp . '
-Schedule Kick-off meeting
+DESCRIPTION:Turno programado
 X-ALT-DESC;FMTTYPE=text/html:<html><head></head><body><h2>¿Donde?</h2><p><strong>Turno en Nuestra Clínica</strong></p></body></html>
 SUMMARY:Turno en Clínica Comunitaria
 URL;VALUE=URI:https://salud.origen.ar

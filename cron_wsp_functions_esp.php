@@ -87,7 +87,7 @@ SEQUENCE:0
 UID:' . $cal_uid . '
 ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;CN='.$to.':mailto:'.$to.'
 DTSTAMP:' . $todaystamp . '
-Schedule Kick-off meeting
+DESCRIPTION:Turno programado
 X-ALT-DESC;FMTTYPE=text/html:<html><head></head><body><h2>¿Donde?</h2><p><strong>Turno en Nuestra Clínica</strong></p></body></html>
 SUMMARY:Turno en Clínica Comunitaria
 URL: https://salud.origen.ar
