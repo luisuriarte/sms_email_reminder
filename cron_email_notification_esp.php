@@ -68,7 +68,7 @@ $db_patient = cron_getAlertpatientData($TYPE);
 echo "<br />Total " . count($db_patient) . " Registros Encontrados\n";
 for ($p = 0; $p < count($db_patient); $p++) {
     $prow = $db_patient[$p];
-        
+    $patient_name = $prow['fname'] . " " . $prow['mname'] . " " . $prow['lname'];
     $app_date = $prow['pc_eventDate'] . " " . $prow['pc_startTime'];
     $app_end_date = $prow['pc_eventDate'] . " " . $prow['pc_endTime'];
     $app_time = strtotime($app_date);
@@ -96,7 +96,8 @@ for ($p = 0; $p < count($db_patient); $p++) {
             $db_email_msg['email_subject'],
             $db_email_msg['message'],
             $app_date,
-			$app_end_date
+			$app_end_date,
+            $patientname
         );
 
         // insert entry in notification_log table

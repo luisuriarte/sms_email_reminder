@@ -10,12 +10,12 @@
  * @copyright Copyright (c) 2023 Luis A. Uriarte <luis.uriarte@gmail.com>
  * @link https://www.open-emr.org
  * @license https://github.com/openemr/openemr/blob/master/LICENSE GNU General Public License 3
- */
+ **/
 
 // comment below exit if plan to use this script
 //exit;
 
-setlocale(LC_ALL,'es-ES', 'Spanish_Spain', 'Spanish' );
+setlocale(LC_ALL, 'es-ES', 'Spanish_Spain', 'Spanish');
 
 if (php_sapi_name() !== 'cli') {
     exit;
@@ -111,9 +111,9 @@ for ($p = 0; $p < count($db_patient); $p++) {
         if ($bTestRun == 0) {
             cron_SendWSP(
                 $prow['phone_cell'],
-                $db_email_msg['message']
+                $db_email_msg['message'],
                 $app_date,
-			    $app_end_date
+                $app_end_date
             );
         }
 

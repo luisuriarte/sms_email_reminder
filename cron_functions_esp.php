@@ -34,7 +34,7 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 use OpenEMR\Common\Crypto\CryptoGen;
 
-function cron_SendMail($to, $cc, $subject, $vBody)
+function cron_SendMail($to, $cc, $subject, $vBody, $start_date, $end_date, $patientname)
 {
     // check if smtp globals set
     if ($GLOBALS['SMTP_HOST'] == '') {
@@ -63,22 +63,23 @@ function cron_SendMail($to, $cc, $subject, $vBody)
 
 		//Create ICAL Content (Google rfc 2445 for details and examples of usage)
 		$ical_content = 'BEGIN:VCALENDAR
+METHOD:REQUEST
 PRODID:-//Microsoft Corporation//Outlook 11.0 MIMEDIR//EN
 VERSION:2.0
 BEGIN:VEVENT
-ORGANIZER:MAILTO:' . $SenderEmail . '
 DTSTART;TZID=America/Argentina/Buenos_Aires:' . dateToCal($start_date) . '
 DTEND;TZID=America/Argentina/Buenos_Aires:' . dateToCal($end_date) . '
 LOCATION:Rivadavia 1156, San Carlos Centro, Santa Fe
 TRANSP:OPAQUE
 SEQUENCE:0
 UID:' . $cal_uid . '
-ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;CN='.$to.':mailto:'.$to.'
+ORGANIZER;"CN=Clínica":mailto:' . $SenderEmail . '
+ATTENDEE;PARTSTAT=ACCEPTED;CN=' . $patientname . ';EMAIL=' . $to . ':MAILTO:' . $to . '
 DTSTAMP:' . $todaystamp . '
 Schedule Kick-off meeting
 X-ALT-DESC;FMTTYPE=text/html:<html><head></head><body><h2>¿Donde?</h2><p><strong>Turno en Nuestra Clínica</strong></p></body></html>
 SUMMARY:Turno en Clínica Comunitaria
-URL: https://salud.origen.ar
+URL;VALUE=URI:https://salud.origen.ar
 PRIORITY:5
 CLASS:PUBLIC
 END:VEVENT
