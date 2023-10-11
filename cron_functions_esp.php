@@ -76,8 +76,7 @@ UID:' . $cal_uid . '
 ORGANIZER;"CN=Clínica":mailto:' . $SenderEmail . '
 ATTENDEE;PARTSTAT=ACCEPTED;CN=' . $patientname . ';EMAIL=' . $to . ':MAILTO:' . $to . '
 DTSTAMP:' . $todaystamp . '
-DESCRIPTION:Turno programado
-X-ALT-DESC;FMTTYPE=text/html:<html><head></head><body><h2>¿Donde?</h2><p><strong>Turno en Nuestra Clínica</strong></p></body></html>
+DESCRIPTION:' . $vBody . '
 SUMMARY:Turno en Clínica Comunitaria
 URL;VALUE=URI:https://salud.origen.ar
 PRIORITY:5
@@ -111,6 +110,7 @@ END:VCALENDAR';
 			</div>
 		EOT;
 		$mail->Body = $html;
+        $mail->Ical = $ical_content;
 		$mail->AddStringAttachment($ical_content, "ical.ics", "base64", "text/calendar; charset=utf-8; method=REQUEST");
 		if(!$mail->send()) {
             echo "No se puede enviar mensaje a " . text($to) . ".\nError: " . text($mail->ErrorInfo) . "\n";
