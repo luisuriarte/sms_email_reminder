@@ -307,7 +307,7 @@ function cron_setmessage($prow, $db_email_msg)
     $dias = array("Domingo" , "Lunes" , "Martes" , "Miercoles" , "Jueves" , "Viernes" , "Sábado");
     $meses = array("Enero" , "Febrero" , "Marzo" , "Abril" , "Mayo" , "Junio" , "Julio" , "Agosto" , "Septiembre" , "Octubre" , "Noviembre" , "Diciembre");
     $DATE = $dias[date('w' , $dtWrk)]." ".date('d' , $dtWrk)." de ".$meses[date('n' , $dtWrk)-1]. " del ".date('Y' , $dtWrk) ;
-    $STARTTIME = date("H:i A", $dtWrk);
+    $STARTTIME = date("H:i", $dtWrk);
     $ENDTIME = $prow['pc_endTime'];
     $find_array = array('***NAME***' , '***PROVIDER***' , '***DATE***' , '***STARTTIME***' , '***ENDTIME***');
     $replace_array = array($NAME , $PROVIDER , $DATE , $STARTTIME , $ENDTIME);
