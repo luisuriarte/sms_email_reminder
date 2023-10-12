@@ -6,7 +6,7 @@ Son 3 archivos que se ejecutan mediante cron:
 - php cron_email_notification_en.php  E-Mail en Ingles (Fecha, hora y días).
 - php cron_email_notification_esp.php  E-Mail en Español (Fecha, hora y días).
 - php cron_wsp_notification_esp.php  WhatsApp en Español (Fecha, hora y días).
-En los email, se envia mensaje y logo más archivo de invitación iCalendar "ical.ics".
+En los email, se envia mensaje con logo más archivo de invitación iCalendar "ical.ics".
 En WhatsApp un mensaje corto con archivo adjunto iCalendar "ical.ics".
 Para envio de WhatApp se usa la empresa https://ultramsg.com/ (En Octubre/2023, el 
 valor mensual es de U$S 39, envios ilimitados).
