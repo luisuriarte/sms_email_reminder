@@ -12,38 +12,32 @@
  * @license     https://github.com/openemr/openemr/blob/master/LICENSE GNU General Public License 3
  */
 
-if (php_sapi_name() !== 'cli') {
-    exit;
-}
+ global $argc;
 
-global $argc;
-global $data_info;
-
-// larry :: hack add for command line version
-$_SERVER['REQUEST_URI'] = $_SERVER['PHP_SELF'];
-$_SERVER['SERVER_NAME'] = 'localhost';
-$backpic = "";
-
-// for cron
-if ($argc > 1 && empty($_SESSION['site_id']) && empty($_GET['site'])) {
-    $c = stripos($argv[1], 'site=');
-    if ($c === false) {
-        echo xlt("Missing Site Id using default") . "\n";
-        $argv[1] = "site=default";
-    }
-    $args = explode('=', $argv[1]);
-    $_GET['site'] = isset($args[1]) ? $args[1] : 'default';
-}
-if (php_sapi_name() === 'cli') {
-    // $_SERVER[‘HTTP_HOST’] = ‘localhost’;
-    $_SERVER['HTTP_HOST'] = 'localhost';
-
-    $ignoreAuth = true;
-}
-require_once(__DIR__ . "/../../interface/globals.php");
-require_once(__DIR__ . "/../../library/appointments.inc.php");
-require_once(__DIR__ . "/../../library/patient_tracker.inc.php");
-require_once("cron_functions_en.php");
+ // larry :: hack add for command line version
+ $_SERVER['REQUEST_URI'] = $_SERVER['PHP_SELF'];
+ $_SERVER['SERVER_NAME'] = 'localhost';
+ $backpic = "";
+ 
+ // for cron
+ if ($argc > 1 && empty($_SESSION['site_id']) && empty($_GET['site'])) {
+     $c = stripos($argv[1], 'site=');
+     if ($c === false) {
+         echo xlt("Missing Site Id using default") . "\n";
+         $argv[1] = "site=default";
+     }
+     $args = explode('=', $argv[1]);
+     $_GET['site'] = isset($args[1]) ? $args[1] : 'default';
+ }
+ if (php_sapi_name() === 'cli') {
+     $_SERVER['HTTP_HOST'] = 'localhost';
+ 
+     $ignoreAuth = true;
+ }
+ require_once(__DIR__ . "/../../interface/globals.php");
+ require_once(__DIR__ . "/../../library/appointments.inc.php");
+ require_once(__DIR__ . "/../../library/patient_tracker.inc.php");
+ require_once("cron_functions_en.php");
 
 // check command line for quite option
 $bTestRun = isset($_REQUEST['dryrun']) ? 1 : 0;

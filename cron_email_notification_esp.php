@@ -12,9 +12,6 @@
  * @license https://github.com/openemr/openemr/blob/master/LICENSE GNU General Public License 3
  */
 
-// comment below exit if plan to use this script
-//exit;
-
 setlocale(LC_ALL,'es-ES', 'Spanish_Spain', 'Spanish' );
 
 global $argc;
@@ -35,7 +32,6 @@ if ($argc > 1 && empty($_SESSION['site_id']) && empty($_GET['site'])) {
     $_GET['site'] = isset($args[1]) ? $args[1] : 'default';
 }
 if (php_sapi_name() === 'cli') {
-//    $_SERVER[‘HTTP_HOST’] = ‘localhost’;
     $_SERVER['HTTP_HOST'] = 'localhost';
 
     $ignoreAuth = true;
@@ -97,7 +93,7 @@ for ($p = 0; $p < count($db_patient); $p++) {
             $db_email_msg['message'],
             $app_date,
             $app_end_date,
-            $patientname
+            $patient_name
         );
 
         // insert entry in notification_log table

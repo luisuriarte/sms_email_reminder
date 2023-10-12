@@ -12,9 +12,6 @@
  * @license https://github.com/openemr/openemr/blob/master/LICENSE GNU General Public License 3
  **/
 
-// comment below exit if plan to use this script
-//exit;
-
 setlocale(LC_ALL, 'es-ES', 'Spanish_Spain', 'Spanish');
 
 if (php_sapi_name() !== 'cli') {
@@ -40,7 +37,6 @@ if ($argc > 1 && empty($_SESSION['site_id']) && empty($_GET['site'])) {
     $_GET['site'] = isset($args[1]) ? $args[1] : 'default';
 }
 if (php_sapi_name() === 'cli') {
-    // $_SERVER[‘HTTP_HOST’] = ‘localhost’;
     $_SERVER['HTTP_HOST'] = 'localhost';
 
     $ignoreAuth = true;
@@ -75,16 +71,13 @@ $SMS_GATEWAY_APIKEY = $vectNotificationSettings['SMS_gateway_apikey'];
 // set cron time (time to event ?) - todo extra tests
 $CRON_TIME = $vectNotificationSettings['Send_SMS_Before_Hours'];
 
-// create sms object
-//$mysms = new sms($SMS_GATEWAY_USENAME, $SMS_GATEWAY_PASSWORD, $SMS_GATEWAY_APIKEY);
-
 $db_patient = cron_getAlertpatientData($TYPE);
 echo "\n<br />Total " . text(count($db_patient)) . " Records Found";
 
 // for every event found
 for ($p = 0; $p < count($db_patient); $p++) {
     $prow = $db_patient[$p];
-
+    $patient_name = $prow['fname'] . " " . $prow['mname'] . " " . $prow['lname'];
     $app_date = $prow['pc_eventDate'] . " " . $prow['pc_startTime'];
     $app_end_date = $prow['pc_eventDate'] . " " . $prow['pc_endTime'];
     $app_time = strtotime($app_date);
@@ -113,7 +106,8 @@ for ($p = 0; $p < count($db_patient); $p++) {
                 $prow['phone_cell'],
                 $db_email_msg['message'],
                 $app_date,
-                $app_end_date
+                $app_end_date,
+                $patient_name
             );
         }
 

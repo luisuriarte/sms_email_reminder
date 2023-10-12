@@ -11,7 +11,6 @@
  * @license   https://github.com/openemr/openemr/blob/master/LICENSE GNU General Public License 3
  */
 
-// larry :: somne global to be defined here
 global $smsgateway_info;
 global $patient_info;
 global $data_info;
@@ -19,6 +18,10 @@ global $data_info;
 global $SMS_NOTIFICATION_HOUR;
 global $EMAIL_NOTIFICATION_HOUR;
 
+////////////////////////////////////////////////////////////////////
+// Function:    dateToCal
+// Purpose: Fecha a formato iCalendar
+////////////////////////////////////////////////////////////////////
 function dateToCal($timestamp) {
     return date('Ymd\THis', strtotime($timestamp));
 }
@@ -64,8 +67,13 @@ if (!function_exists('my_print_r')) {
 // Function:    cron_SendWSP
 // Purpose: send WhatsApp
 ////////////////////////////////////////////////////////////////////
-function cron_SendWSP($to, $vBody, $start_date, $end_date)
+function cron_SendWSP($to, $vBody, $start_date, $end_date, $patient_name)
 {
+    $SenderEmail = $GLOBALS['patient_reminder_sender_email'];
+    // Luis: No funciona SMS_GATEWAY_USENAME ni SMS_GATEWAY_APIKEY de Globals, 
+    // en cambio lo toma de la tabla notification_settings. Los valores se 
+    // colocan atraves de Admin/Miscellaneous/Batch Communication Tool
+    // Pestaña: SMS/Email Alert Settings (Sin usuario).
     $INSTANCIA = $GLOBALS['SMS_GATEWAY_USENAME'];
     $APIKEY = $GLOBALS['SMS_GATEWAY_APIKEY'];
     $todaystamp = gmdate("Ymd\THis\Z");
@@ -75,65 +83,70 @@ function cron_SendWSP($to, $vBody, $start_date, $end_date)
 
     //Create ICAL Content (Google rfc 2445 for details and examples of usage)
     $ical_content = 'BEGIN:VCALENDAR
-    METHOD:REQUEST
-    PRODID:-//Microsoft Corporation//Outlook 11.0 MIMEDIR//EN
-    VERSION:2.0
-    BEGIN:VEVENT
-    DTSTART;TZID=America/Argentina/Buenos_Aires:' . dateToCal($start_date) . '
-    DTEND;TZID=America/Argentina/Buenos_Aires:' . dateToCal($end_date) . '
-    LOCATION:Rivadavia 1156, San Carlos Centro, Santa Fe
-    TRANSP:OPAQUE
-    SEQUENCE:0
-    UID:' . $cal_uid . '
-    ORGANIZER;CN=Clínica:mailto:' . $SenderEmail . '
-    ATTENDEE;PARTSTAT=ACCEPTED;CN=' . $patientname . ';EMAIL=' . $to . ':mailto:' . $to . '
-    DTSTAMP:' . $todaystamp . '
-    SUMMARY:Turno en Clínica Comunitaria
-    DESCRIPTION:' . $vBody . '
-    URL:https://salud.origen.ar
-    PRIORITY:5
-    CLASS:PUBLIC
-    END:VEVENT
-    END:VCALENDAR';
-    $html = <<<EOT
-        <div>
-            <img src="cid:logo"> 
-            <p><b><i><big>$vBody</big></i></b></p>
-        </div>
-        EOT;
+METHOD:REQUEST
+PRODID:-//Microsoft Corporation//Outlook 11.0 MIMEDIR//EN
+VERSION:2.0
+BEGIN:VEVENT
+DTSTART;TZID=America/Argentina/Buenos_Aires:' . dateToCal($start_date) . '
+DTEND;TZID=America/Argentina/Buenos_Aires:' . dateToCal($end_date) . '
+LOCATION:Rivadavia 1156, San Carlos Centro, Santa Fe
+TRANSP:OPAQUE
+SEQUENCE:0
+UID:' . $cal_uid . '
+ORGANIZER;CN=Clínica:mailto:' . $SenderEmail . '
+ATTENDEE;PARTSTAT=ACCEPTED;CN=' . $patient_name . ';EMAIL=' . $to . ':mailto:' . $to . '
+DTSTAMP:' . $todaystamp . '
+SUMMARY:Turno en Clínica Comunitaria
+DESCRIPTION:' . $vBody . '
+URL:https://salud.origen.ar
+PRIORITY:5
+CLASS:PUBLIC
+END:VEVENT
+END:VCALENDAR';
+
+    $fechaActual = date("Y-m-d_H-i-s");
+    //$archivo = "iCal-" . $fechaActual . ".ics";
+    $archivo = "ical.ics";
+    $file_handle = fopen($archivo, 'w');
+    fwrite($file_handle, $ical_content);
+
+    echo " ==    Instancia: " . $INSTANCIA . " ==   ApiKey: " . $APIKEY . " ==   Cel.:" . $to . " ==    Sender:" . $SenderEmail . "   ==    ";
 
     $params = array(
         'token' => $APIKEY,
         'to' => $to,
-        'body' => $vBody
-        );
+        'filename' => 'Turno.ics',
+        'document' => 'http://hcd.origen.ar//modules/sms_email_reminder/ical.ics',
+        'caption' => 'Clínica Comunitaria: Presione en el adjunto para verificar su turno. Gracias.'
+    );
+        
     $curl = curl_init();
-    curl_setopt_array($curl, array(
-      CURLOPT_URL => "https://api.ultramsg.com/$INSTANCIA/messages/chat",
-      CURLOPT_RETURNTRANSFER => true,
-      CURLOPT_ENCODING => "",
-      CURLOPT_MAXREDIRS => 10,
-      CURLOPT_TIMEOUT => 30,
-      CURLOPT_SSL_VERIFYHOST => 0,
-      CURLOPT_SSL_VERIFYPEER => 0,
-      CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-      CURLOPT_CUSTOMREQUEST => "POST",
-      CURLOPT_POSTFIELDS => http_build_query($params),
-      CURLOPT_HTTPHEADER => array(
-        "content-type: application/x-www-form-urlencoded"
-      ),
-    ));
-
-    $response = curl_exec($curl);
-    $err = curl_error($curl);
-
-    curl_close($curl);
-
-    if ($err) {
-        echo "cURL Error #:" . $err;
-    } else {
-        echo $response;
-    }
+        curl_setopt_array($curl, array(
+          CURLOPT_URL => "https://api.ultramsg.com/$INSTANCIA/messages/document",
+          CURLOPT_RETURNTRANSFER => true,
+          CURLOPT_ENCODING => "",
+          CURLOPT_MAXREDIRS => 10,
+          CURLOPT_TIMEOUT => 30,
+          CURLOPT_SSL_VERIFYHOST => 0,
+          CURLOPT_SSL_VERIFYPEER => 0,
+          CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+          CURLOPT_CUSTOMREQUEST => "POST",
+          CURLOPT_POSTFIELDS => http_build_query($params),
+          CURLOPT_HTTPHEADER => array(
+            "content-type: application/x-www-form-urlencoded"
+          ),
+        ));
+        
+        $response = curl_exec($curl);
+        $err = curl_error($curl);
+        
+        curl_close($curl);
+        
+        if ($err) {
+          echo "cURL Error #:" . $err;
+        } else {
+          echo $response;
+        }
 }
 ////////////////////////////////////////////////////////////////////
 // Function:    cron_updateentry

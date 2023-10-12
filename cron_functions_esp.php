@@ -19,6 +19,10 @@ global $data_info;
 global $SMS_NOTIFICATION_HOUR;
 global $EMAIL_NOTIFICATION_HOUR;
 
+////////////////////////////////////////////////////////////////////
+// Function:    dateToCal
+// Purpose: Fecha a formato iCalendar
+////////////////////////////////////////////////////////////////////
 function dateToCal($timestamp) {
     return date('Ymd\THis', strtotime($timestamp));
 }
@@ -34,7 +38,7 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 use OpenEMR\Common\Crypto\CryptoGen;
 
-function cron_SendMail($to, $cc, $subject, $vBody, $start_date, $end_date, $patientname)
+function cron_SendMail($to, $cc, $subject, $vBody, $start_date, $end_date, $patient_name)
 {
     // check if smtp globals set
     if ($GLOBALS['SMTP_HOST'] == '') {
@@ -74,7 +78,7 @@ TRANSP:OPAQUE
 SEQUENCE:0
 UID:' . $cal_uid . '
 ORGANIZER;CN=Clínica:mailto:' . $SenderEmail . '
-ATTENDEE;PARTSTAT=ACCEPTED;CN=' . $patientname . ';EMAIL=' . $to . ':mailto:' . $to . '
+ATTENDEE;PARTSTAT=ACCEPTED;CN=' . $patient_name . ';EMAIL=' . $to . ':mailto:' . $to . '
 DTSTAMP:' . $todaystamp . '
 SUMMARY:Turno en Clínica Comunitaria
 DESCRIPTION:' . $vBody . '

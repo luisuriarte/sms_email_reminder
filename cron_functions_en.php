@@ -4,12 +4,13 @@
  * CRON FUNCTIONS - to use with cron_smd(*) and cron_email backend
  * scripts to notify events
  *
+ * @category  PHP
  * @package   OpenEMR
- * @link      http://www.open-emr.org
- * @author    Larry Lart
- * @copyright Copyright (c) 2008 Larry Lart
- * @copyright Copyright (c) 2022 Luis A. Uriarte <luis.uriarte@gmail.com>
+ * @author    Larry Lart <larry@mail.com>
+ * @copyright Copyright (c) 2008 Larry Lart <larry@mail.com>
+ * @copyright Copyright (c) 2023 Luis A. Uriarte <luis.uriarte@gmail.com>
  * @license   https://github.com/openemr/openemr/blob/master/LICENSE GNU General Public License 3
+ * @link      http://www.open-emr.org 
  */
 
 global $smsgateway_info;
@@ -23,6 +24,10 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 use OpenEMR\Common\Crypto\CryptoGen;
 
+////////////////////////////////////////////////////////////////////
+// Function:    dateToCal
+// Purpose: Fecha a formato iCalendar
+////////////////////////////////////////////////////////////////////
 function dateToCal($timestamp) {
     return date('Ymd\THis', strtotime($timestamp));
 }
@@ -33,7 +38,6 @@ function dateToCal($timestamp) {
 // Input:   to, cc, subject and email body
 // Output:  status - if sent or not
 ////////////////////////////////////////////////////////////////////
-
 function cron_SendMail($to, $cc, $subject, $vBody, $start_date, $end_date)
 {
     // check if smtp globals set
@@ -50,26 +54,26 @@ function cron_SendMail($to, $cc, $subject, $vBody, $start_date, $end_date)
 
 		//Create ICAL Content (Google rfc 2445 for details and examples of usage)
 		$ical_content = 'BEGIN:VCALENDAR
-        METHOD:REQUEST
-        PRODID:-//Microsoft Corporation//Outlook 11.0 MIMEDIR//EN
-        VERSION:2.0
-        BEGIN:VEVENT
-        DTSTART;TZID=America/Argentina/Buenos_Aires:' . dateToCal($start_date) . '
-        DTEND;TZID=America/Argentina/Buenos_Aires:' . dateToCal($end_date) . '
-        LOCATION:Rivadavia 1156, San Carlos Centro, Santa Fe
-        TRANSP:OPAQUE
-        SEQUENCE:0
-        UID:' . $cal_uid . '
-        ORGANIZER;CN=Clínica:mailto:' . $SenderEmail . '
-        ATTENDEE;PARTSTAT=ACCEPTED;CN=' . $patientname . ';EMAIL=' . $to . ':mailto:' . $to . '
-        DTSTAMP:' . $todaystamp . '
-        SUMMARY:Turno en Clínica Comunitaria
-        DESCRIPTION:' . $vBody . '
-        URL:https://salud.origen.ar
-        PRIORITY:5
-        CLASS:PUBLIC
-        END:VEVENT
-        END:VCALENDAR';
+METHOD:REQUEST
+PRODID:-//Microsoft Corporation//Outlook 11.0 MIMEDIR//EN
+VERSION:2.0
+BEGIN:VEVENT
+DTSTART;TZID=America/Argentina/Buenos_Aires:' . dateToCal($start_date) . '
+DTEND;TZID=America/Argentina/Buenos_Aires:' . dateToCal($end_date) . '
+LOCATION:Rivadavia 1156, San Carlos Centro, Santa Fe
+TRANSP:OPAQUE
+SEQUENCE:0
+UID:' . $cal_uid . '
+ORGANIZER;CN=Clínica:mailto:' . $SenderEmail . '
+ATTENDEE;PARTSTAT=ACCEPTED;CN=' . $patient_name . ';EMAIL=' . $to . ':mailto:' . $to . '
+DTSTAMP:' . $todaystamp . '
+SUMMARY:Turno en Clínica Comunitaria
+DESCRIPTION:' . $vBody . '
+URL:https://salud.origen.ar
+PRIORITY:5
+CLASS:PUBLIC
+END:VEVENT
+END:VCALENDAR';
 
         $mail = new PHPMailer();
         $mail->SMTPDebug = 3;
