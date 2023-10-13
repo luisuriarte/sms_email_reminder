@@ -110,8 +110,6 @@ END:VCALENDAR';
     $file_handle = fopen($archivo, 'w');
     fwrite($file_handle, $ical_content);
 
-    echo " ==    Instancia: " . $INSTANCIA . " ==   ApiKey: " . $APIKEY . " ==   Cel.:" . $to . " ==    Sender:" . $SenderEmail . "   ==    ";
-
     $params = array(
         'token' => $APIKEY,
         'to' => $to,
