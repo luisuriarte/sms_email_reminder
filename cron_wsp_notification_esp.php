@@ -97,8 +97,6 @@ for ($p = 0; $p < count($db_patient); $p++) {
 
     // check in the interval
     if ($remain_hour >= -($CRON_TIME) &&  $remain_hour <= $CRON_TIME) {
-        // insert entry in notification_log table
-        cron_InsertNotificationLogEntry($TYPE, $prow, $db_email_msg);
 
         //set message
         $db_email_msg['message'] = cron_setmessage($prow, $db_email_msg);
