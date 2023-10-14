@@ -52,15 +52,16 @@ if ($argc > 1 && $argv[2] == 'test') {
     $bTestRun = 1;
 }
 
-$TYPE = "SMS";
+$TYPE = "WSP";
 $CRON_TIME = 5;
 
-$curr_date = date("Y-m-d");
-$curr_time = time();
-$check_date = date("Y-m-d", mktime(date("h") + $SMS_NOTIFICATION_HOUR, 0, 0, date("m"), date("d"), date("Y")));
+// set cron time (time to event ?) - todo extra tests
+$vectNotificationSettings = cron_GetNotificationSettings();
+$CRON_TIME = $vectNotificationSettings['Send_Email_Before_Hours'];
 
-// larry :: move this in the loop to keep it fresh - perhaps try to use it without change
-// it's content - to do latter
+$check_date = date("Y-m-d", mktime(date("h") + $EMAIL_NOTIFICATION_HOUR, 0, 0, date("m"), date("d"), date("Y")));
+
+// get data from automatic_notification table
 $db_email_msg = cron_getNotificationData($TYPE);
 
 // get notification settings
@@ -72,7 +73,7 @@ $SMS_GATEWAY_APIKEY = $vectNotificationSettings['SMS_gateway_apikey'];
 $CRON_TIME = $vectNotificationSettings['Send_SMS_Before_Hours'];
 
 $db_patient = cron_getAlertpatientData($TYPE);
-echo "\n<br />Total " . text(count($db_patient)) . " Records Found";
+echo "\n<br />Total " . text(count($db_patient)) . " Registros Encontrados";
 
 // for every event found
 for ($p = 0; $p < count($db_patient); $p++) {
@@ -81,6 +82,8 @@ for ($p = 0; $p < count($db_patient); $p++) {
     $app_date = $prow['pc_eventDate'] . " " . $prow['pc_startTime'];
     $app_end_date = $prow['pc_eventDate'] . " " . $prow['pc_endTime'];
     $app_time = strtotime($app_date);
+    $eid = $prow['pc_eid'];
+    $pid = $prow['pid'];
 
     $app_time_hour = round($app_time / 3600);
     $curr_total_hour = round(time() / 3600);
@@ -111,10 +114,16 @@ for ($p = 0; $p < count($db_patient); $p++) {
             );
         }
 
-        //update entry >> pc_sendalertsms='Yes'
+        // insert entry in notification_log table
+        cron_InsertNotificationLogEntry($TYPE, $prow, $db_email_msg);
+    
+        //update entry >> pc_sendalertemail='Yes'
         cron_updateentry($TYPE, $prow['pid'], $prow['pc_eid']);
 
-        $strMsg .= " || ALERT SENT SUCCESSFULLY TO " . $prow['phone_cell'];
+        // Update patient_tracker table and insert a row in patient_tracker_element table
+        manage_tracker_status($prow['pc_eventDate'], $prow['pc_startTime'], $eid, $pid, $user = 'Automático', $status = $TYPE, $room = '', $enc_id = '');
+
+        $strMsg .= " || ALERT SENT SUCCESSFULLY TO " . $prow['email'];
         $strMsg .= "\n" . $patient_info . "\n" . $smsgateway_info . "\n" . $data_info . "\n" . $db_email_msg['message'];
     }
 

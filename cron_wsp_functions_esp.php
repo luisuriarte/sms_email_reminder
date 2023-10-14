@@ -110,7 +110,7 @@ END:VCALENDAR';
     $file_handle = fopen($archivo, 'w');
     fwrite($file_handle, $ical_content);
 
-    $params = array(
+/*     $params = array(
         'token' => $APIKEY,
         'to' => $to,
         'filename' => 'Turno.ics',
@@ -144,7 +144,7 @@ END:VCALENDAR';
           echo "cURL Error #:" . $err;
         } else {
           echo $response;
-        }
+        } */
 }
 ////////////////////////////////////////////////////////////////////
 // Function:    cron_updateentry
@@ -154,7 +154,7 @@ function cron_updateentry($type, $pid, $pc_eid)
 {
     $query = "UPDATE openemr_postcalendar_events SET ";
     
-    if ($type == 'SMS') {
+    if ($type == 'WSP') {
         $query .= " openemr_postcalendar_events.pc_sendalertsms='YES' ,  openemr_postcalendar_events.pc_apptstatus='WSP' ";
     } else {
         $query .= " openemr_postcalendar_events.pc_sendalertemail='YES' ,  openemr_postcalendar_events.pc_apptstatus='EMAIL' ";
@@ -172,7 +172,7 @@ function cron_getAlertpatientData($type)
 {
     global $SMS_NOTIFICATION_HOUR, $EMAIL_NOTIFICATION_HOUR;
    
-    if ($type == 'SMS') {
+    if ($type == 'WSP') {
         $ssql = " AND pd.hipaa_allowsms='YES' AND pd.phone_cell<>'' AND ope.pc_sendalertsms='NO' ";
         $check_date = date("Y-m-d", mktime(date("h") + $SMS_NOTIFICATION_HOUR, 0, 0, date("m"), date("d"), date("Y")));
     } else {
@@ -223,11 +223,9 @@ function cron_getNotificationData($type)
 function cron_InsertNotificationLogEntry($type, $prow, $db_email_msg)
 {
     global $SMS_GATEWAY_USENAME, $SMS_GATEWAY_PASSWORD, $SMS_GATEWAY_APIKEY;
-    if ($type == 'SMS') {
-        $smsgateway_info = $db_email_msg['sms_gateway_type'] . "|||" . $SMS_GATEWAY_USENAME . "|||" . $SMS_GATEWAY_PASSWORD . "|||" . $SMS_GATEWAY_APIKEY;
-    } else {
-        $smsgateway_info = $db_email_msg['email_sender'] . "|||" . $db_email_msg['email_subject'];
-    }
+    $type == 'WSP';
+    $smsgateway_info = $db_email_msg['sms_gateway_type'] . "|||" . $SMS_GATEWAY_USENAME . "|||" . $SMS_GATEWAY_PASSWORD . "|||" . $SMS_GATEWAY_APIKEY;
+
     $patient_info = $prow['title'] . " " . $prow['fname'] . " " . $prow['mname'] . " " . $prow['lname'] . "|||" . $prow['phone_cell'] . "|||" . $prow['email'];
     $data_info = $prow['pc_eventDate'] . "|||" . $prow['pc_endDate'] . "|||" . $prow['pc_startTime'] . "|||" . $prow['pc_endTime'];
     $sql_loginsert = "INSERT INTO `notification_log` ( `iLogId` , `pid` , `pc_eid` , `sms_gateway_type` , `message` , `email_sender` , `email_subject` , `type` , `patient_info` , `smsgateway_info` , `pc_eventDate` , `pc_endDate` , `pc_startTime` , `pc_endTime` , `dSentDateTime` ) VALUES ";
