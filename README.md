@@ -10,3 +10,8 @@ En los email, se envia mensaje con logo más archivo de invitación iCalendar "i
 En WhatsApp un mensaje corto con archivo adjunto iCalendar "ical.ics".
 Para envio de WhatApp se usa la empresa https://ultramsg.com/ (En Octubre/2023, el 
 valor mensual es de U$S 39, envios ilimitados).
+Para que funcione bien en la tabla automatic_notification se debe
+editar el campo type, en conjunto (entradas) debe quedar 'SMS','Email','WSP'.
+y agregar un registro con type igual a WSP.
+De la misma manera en la tabla notification_log modificar el campo type.
+Tambien es necesario hacerlo en la tabla notification-settings.
