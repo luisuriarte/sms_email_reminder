@@ -104,13 +104,13 @@ CLASS:PUBLIC
 END:VEVENT
 END:VCALENDAR';
 
-    $fechaActual = date("Y-m-d_H-i-s");
+    //$fechaActual = date("Y-m-d_H-i-s");
     //$archivo = "iCal-" . $fechaActual . ".ics";
     $archivo = "ical.ics";
     $file_handle = fopen($archivo, 'w');
     fwrite($file_handle, $ical_content);
 
-/*     $params = array(
+     $params = array(
         'token' => $APIKEY,
         'to' => $to,
         'filename' => 'Turno.ics',
@@ -144,7 +144,7 @@ END:VCALENDAR';
           echo "cURL Error #:" . $err;
         } else {
           echo $response;
-        } */
+        } 
 }
 ////////////////////////////////////////////////////////////////////
 // Function:    cron_updateentry
