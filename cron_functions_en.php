@@ -197,13 +197,14 @@ function cron_getAlertpatientData($type)
                     ope.pc_hometext, ope.pc_eventDate, ope.pc_endDate,
                     ope.pc_duration, ope.pc_alldayevent, ope.pc_startTime, ope.pc_endTime,
                     CONCAT(u.fname, ' ', u.mname, ' ', u.lname) user_name, pte.pt_tracker_id,
-                    pte.status, pt.lastseq
+                    pte.status, pt.lastseq, f.name AS facility_name
             FROM openemr_postcalendar_events AS ope
             LEFT OUTER JOIN patient_tracker AS pt ON pt.pid = ope.pc_pid AND pt.apptdate = ope.pc_eventDate AND pt.appttime = ope.pc_starttime
             AND pt.eid = ope.pc_eid
             LEFT OUTER JOIN patient_tracker_element AS pte ON pte.pt_tracker_id = pt.id AND pte.seq = pt.lastseq
             LEFT OUTER JOIN patient_data AS pd ON pd.pid = ope.pc_pid
             LEFT OUTER JOIN users AS u ON u.id = ope.pc_aid
+            LEFT OUTER JOIN facility AS f ON f.id = ope.pc_facility
             WHERE ope.pc_pid = pd.pid $ssql
             ORDER BY ope.pc_eventDate, ope.pc_startTime";
 
@@ -278,8 +279,9 @@ function cron_setmessage($prow, $db_email_msg)
     $DATE = date('l, d M Y', $dtWrk);
     $STARTTIME = date("h:i A", $dtWrk);
     $ENDTIME = $prow['pc_endTime'];
-    $find_array = array('***NAME***', '***PROVIDER***', '***DATE***', '***STARTTIME***', '***ENDTIME***');
-    $replace_array = array($NAME, $PROVIDER, $DATE, $STARTTIME, $ENDTIME);
+    $FACILITY = $prow['facility_name'];
+    $find_array = array('***NAME***', '***PROVIDER***', '***DATE***', '***STARTTIME***', '***ENDTIME***', '***FACILITY***');
+    $replace_array = array($NAME, $PROVIDER, $DATE, $STARTTIME, $ENDTIME, $FACILITY);
     $message = str_replace($find_array, $replace_array, $db_email_msg['message']);
     return $message;
 }
