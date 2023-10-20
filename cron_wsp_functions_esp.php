@@ -187,7 +187,9 @@ function cron_getAlertpatientData($type)
                     CONCAT(u.fname, ' ', u.mname, ' ', u.lname) user_name, pte.pt_tracker_id,
                     pte.status, pt.lastseq, f.name AS facility_name
             FROM openemr_postcalendar_events AS ope
-            LEFT OUTER JOIN patient_tracker AS pt ON pt.pid = ope.pc_pid AND pt.apptdate = ope.pc_eventDate AND pt.appttime = ope.pc_starttime
+            LEFT OUTER JOIN patient_tracker AS pt ON pt.pid = ope.pc_pid 
+            AND pt.apptdate = ope.pc_eventDate 
+            AND pt.appttime = ope.pc_starttime
             AND pt.eid = ope.pc_eid
             LEFT OUTER JOIN patient_tracker_element AS pte ON pte.pt_tracker_id = pt.id AND pte.seq = pt.lastseq
             LEFT OUTER JOIN patient_data AS pd ON pd.pid = ope.pc_pid
