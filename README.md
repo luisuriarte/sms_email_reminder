@@ -8,7 +8,7 @@ Son 3 archivos que se ejecutan mediante cron:
 - php cron_wsp_notification_esp.php  WhatsApp en Español (Fecha, hora y días).
 En los email, se envia mensaje con logo más archivo de invitación iCalendar "ical.ics".
 En WhatsApp un mensaje corto con archivo adjunto iCalendar "ical.ics".
-Para envio de WhatApp se usa la empresa https://ultramsg.com/ (En Octubre/2023, el 
+Para envio de WhatsApp se usa la empresa https://ultramsg.com/ (En Octubre/2023, el 
 valor mensual es de U$S 39, envios ilimitados).
 Para que funcione bien en la tabla automatic_notification se debe
 editar el campo type, en conjunto (entradas) debe quedar 'SMS','Email','WSP'.
