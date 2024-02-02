@@ -37,7 +37,7 @@
  require_once(__DIR__ . "/../../interface/globals.php");
  require_once(__DIR__ . "/../../library/appointments.inc.php");
  require_once(__DIR__ . "/../../library/patient_tracker.inc.php");
- require_once("cron_functions_en.php");
+ require_once("cron_email_functions_en.php");
 
 // check command line for quite option
 $bTestRun = isset($_REQUEST['dryrun']) ? 1 : 0;
@@ -60,12 +60,18 @@ $db_patient = cron_getAlertpatientData($TYPE);
 echo "<br />Total " . count($db_patient) . " Records Found\n";
 for ($p = 0; $p < count($db_patient); $p++) {
     $prow = $db_patient[$p];
-
+    $patient_name = $prow['fname'] . " " . $prow['mname'] . " " . $prow['lname'];
+    $patient_email = $prow['email'];
     $app_date = $prow['pc_eventDate'] . " " . $prow['pc_startTime'];
     $app_end_date = $prow['pc_eventDate'] . " " . $prow['pc_endTime'];
     $app_time = strtotime($app_date);
     $eid = $prow['pc_eid'];
     $pid = $prow['pid'];
+    $facility_name = $prow['facility_name'];
+    $facility_address = $prow['facility_address'];
+    $facility_phone = $prow['facility_phone'];
+    $facility_email = $prow['facility_email'];
+    $provider = $prow['user_name'];
 
     $app_time_hour = round($app_time / 3600);
     $curr_total_hour = round(time() / 3600);
@@ -81,12 +87,18 @@ for ($p = 0; $p < count($db_patient); $p++) {
         $db_email_msg['message'] = cron_setmessage($prow, $db_email_msg);
         // send mail to patinet
         cron_SendMail(
-            $prow['email'],
+            $patient_email,
             $prow['email_direct'],
             $db_email_msg['email_subject'],
             $db_email_msg['message'],
             $app_date,
-			$app_end_date
+            $app_end_date,
+            $patient_name,
+            $facility_name,
+            $facility_address,
+            $facility_phone,
+            $facility_email,
+            $provider     
         );
         // insert entry in notification_log table
         cron_InsertNotificationLogEntry($TYPE, $prow, $db_email_msg);

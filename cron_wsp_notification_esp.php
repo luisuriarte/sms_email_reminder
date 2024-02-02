@@ -14,10 +14,6 @@
 
 setlocale(LC_ALL, 'es-ES', 'Spanish_Spain', 'Spanish');
 
-if (php_sapi_name() !== 'cli') {
-    exit;
-}
-
 global $argc;
 global $data_info;
 
@@ -79,12 +75,18 @@ echo "\n<br />Total " . text(count($db_patient)) . " Registros Encontrados";
 for ($p = 0; $p < count($db_patient); $p++) {
     $prow = $db_patient[$p];
     $patient_name = $prow['fname'] . " " . $prow['mname'] . " " . $prow['lname'];
+    $patient_phone = $prow['phone_cell'];
+    $patient_email = $prow['email'];
     $app_date = $prow['pc_eventDate'] . " " . $prow['pc_startTime'];
     $app_end_date = $prow['pc_eventDate'] . " " . $prow['pc_endTime'];
     $app_time = strtotime($app_date);
     $eid = $prow['pc_eid'];
     $pid = $prow['pid'];
-
+    $facility_name = $prow['facility_name'];
+    $facility_address = $prow['facility_address'];
+    $facility_phone = $prow['facility_phone'];
+    $facility_email = $prow['facility_email'];
+    $provider = $prow['user_name'];
     $app_time_hour = round($app_time / 3600);
     $curr_total_hour = round(time() / 3600);
 
@@ -104,11 +106,17 @@ for ($p = 0; $p < count($db_patient); $p++) {
         // send sms to patinet - if not in test mode
         if ($bTestRun == 0) {
             cron_SendWSP(
-                $prow['phone_cell'],
+                $patient_phone,
                 $db_email_msg['message'],
                 $app_date,
                 $app_end_date,
-                $patient_name
+                $patient_name,
+                $patient_email,
+                $facility_name,
+                $facility_address,
+                $facility_phone,
+                $facility_email,
+                $provider               
             );
         }
 

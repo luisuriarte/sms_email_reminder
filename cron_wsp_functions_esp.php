@@ -67,7 +67,8 @@ if (!function_exists('my_print_r')) {
 // Function:    cron_SendWSP
 // Purpose: send WhatsApp
 ////////////////////////////////////////////////////////////////////
-function cron_SendWSP($to, $vBody, $start_date, $end_date, $patient_name)
+function cron_SendWSP($patient_phone, $vBody, $start_date, $end_date, $patient_name, $patient_email, $facility_name, 
+                    $facility_address, $facility_phone, $facility_email, $provider)
 {
     $SenderEmail = $GLOBALS['patient_reminder_sender_email'];
     // Luis: No funciona SMS_GATEWAY_USENAME ni SMS_GATEWAY_APIKEY de Globals, 
@@ -87,40 +88,39 @@ METHOD:REQUEST
 PRODID:-//Microsoft Corporation//Outlook 11.0 MIMEDIR//EN
 VERSION:2.0
 BEGIN:VEVENT
-DTSTART;TZID=America/Argentina/Buenos_Aires:' . dateToCal($start_date) . '
-DTEND;TZID=America/Argentina/Buenos_Aires:' . dateToCal($end_date) . '
-LOCATION:Rivadavia 1156, San Carlos Centro, Santa Fe
+DTSTART;TZID=' . $GLOBALS['gbl_time_zone'] . ':' . dateToCal($start_date) . '
+DTEND;TZID=' . $GLOBALS['gbl_time_zone'] . ':' . dateToCal($end_date) . '
+LOCATION:' . $facility_address . '
 TRANSP:OPAQUE
 SEQUENCE:0
 UID:' . $cal_uid . '
-ORGANIZER;CN=Clínica:mailto:' . $SenderEmail . '
-ATTENDEE;PARTSTAT=ACCEPTED;CN=' . $patient_name . ';EMAIL=' . $to . ':mailto:' . $to . '
+ORGANIZER;CN=' . $provider . ':mailto:' . $facility_email . '
+ATTENDEE;PARTSTAT=ACCEPTED;CN=' . $patient_name . ';EMAIL=' . $patient_email . ':mailto:' . $patient_email . '
+CONTACT:' . $facility_name . '\, ' . $facility_phone . '\,' . $facility_email . '
 DTSTAMP:' . $todaystamp . '
-SUMMARY:Turno en Clínica Comunitaria
+SUMMARY:Turno en ' . $facility_name . '
 DESCRIPTION:' . $vBody . '
-URL:https://salud.origen.ar
+URL;VALUE=URI:' . $GLOBALS['online_support_link'] . '
 PRIORITY:5
 CLASS:PUBLIC
+BEGIN:VALARM
+TRIGGER:-PT60M
+REPEAT:1
+DURATION:PT30M
+ACTION:DISPLAY
+END:VALARM
 END:VEVENT
 END:VCALENDAR';
 
-    //$fechaActual = date("Y-m-d_H-i-s");
-    //$archivo = "iCal-" . $fechaActual . ".ics";
-    $archivo = "ical.ics";
-    $file_handle = fopen($archivo, 'w');
-    fwrite($file_handle, $ical_content);
-
-     $params = array(
+    $params=array(
         'token' => $APIKEY,
-        'to' => $to,
-        'filename' => 'Turno.ics',
-        'document' => 'http://hcd.origen.ar//modules/sms_email_reminder/ical.ics',
-        'caption' => 'Clínica Comunitaria: Presione en el adjunto para verificar su turno. Gracias.'
-    );
-        
-    $curl = curl_init();
+        'to' => $patient_phone,
+        'image' => 'https://hcd.origen.ar/modules/sms_email_reminder/logo_wsp.png',
+        'caption' => $vBody
+        );
+        $curl = curl_init();
         curl_setopt_array($curl, array(
-          CURLOPT_URL => "https://api.ultramsg.com/$INSTANCIA/messages/document",
+          CURLOPT_URL => "https://api.ultramsg.com/{$INSTANCIA}/messages/image",
           CURLOPT_RETURNTRANSFER => true,
           CURLOPT_ENCODING => "",
           CURLOPT_MAXREDIRS => 10,
@@ -144,7 +144,57 @@ END:VCALENDAR';
           echo "cURL Error #:" . $err;
         } else {
           echo $response;
-        } 
+        }
+
+        //$fechaActual = date("Y-m-d_H-i-s");
+        //$archivo = ("TURNO-" . $fechaActual . ".ics");
+        //$archivo = "TURNO.ics";
+        $archivo = "TURNO-" . substr(md5(time()), 0, 8) . ".ics";
+        echo $archivo;
+        $file_handle = fopen($archivo, 'w+');
+        fwrite($file_handle, $ical_content);
+
+     $params = array(
+        'token' => $APIKEY,
+        'to' => $patient_phone,
+        'filename' => $archivo,
+        'document' => 'https://hcd.origen.ar/modules/sms_email_reminder/' . $archivo,
+        'caption' => $facility_name . ': Presione en el adjunto para verificar su turno. Gracias.'
+    );
+        
+    $curl = curl_init();
+        curl_setopt_array($curl, array(
+          CURLOPT_URL => "https://api.ultramsg.com/{$INSTANCIA}/messages/document",
+          CURLOPT_RETURNTRANSFER => true,
+          CURLOPT_ENCODING => "",
+          CURLOPT_MAXREDIRS => 10,
+          CURLOPT_TIMEOUT => 30,
+          CURLOPT_SSL_VERIFYHOST => 0,
+          CURLOPT_SSL_VERIFYPEER => 0,
+          CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+          CURLOPT_CUSTOMREQUEST => "POST",
+          CURLOPT_POSTFIELDS => http_build_query($params),
+          CURLOPT_HTTPHEADER => array(
+            "content-type: application/x-www-form-urlencoded"
+          ),
+        ));
+        
+        $response = curl_exec($curl);
+        $err = curl_error($curl);
+        
+        curl_close($curl);
+        
+        if ($err) {
+          echo "cURL Error #:" . $err;
+        } else {
+          echo $response;
+        }
+    If (unlink($archivo)) {
+         // archivo borrado
+        } else {
+         // problema al borrar archivo 
+     }    
+ 
 }
 ////////////////////////////////////////////////////////////////////
 // Function:    cron_updateentry
@@ -185,7 +235,8 @@ function cron_getAlertpatientData($type)
                     ope.pc_hometext, ope.pc_eventDate, ope.pc_endDate,
                     ope.pc_duration, ope.pc_alldayevent, ope.pc_startTime, ope.pc_endTime,
                     CONCAT(u.fname, ' ', u.mname, ' ', u.lname) user_name, pte.pt_tracker_id,
-                    pte.status, pt.lastseq, f.name AS facility_name
+                    pte.status, pt.lastseq, f.name AS facility_name, CONCAT(f.street, ', ', f.city, ', ', f.state)
+                    AS facility_address, f.phone AS facility_phone, f.email AS facility_email
             FROM openemr_postcalendar_events AS ope
             LEFT OUTER JOIN patient_tracker AS pt ON pt.pid = ope.pc_pid 
             AND pt.apptdate = ope.pc_eventDate 
@@ -265,8 +316,6 @@ function cron_InsertNotificationLogEntry($type, $prow, $db_email_msg)
 function cron_setmessage($prow, $db_email_msg)
 {
     $NAME = $prow['title'] . " " . $prow['fname'] . " " . $prow['mname'] . " " . $prow['lname'];
-    //echo "DEBUG :1: name=".$NAME."\n";
-
     $PROVIDER = $prow['user_name'];
     $dtWrk = strtotime($prow['pc_eventDate'] . ' ' . $prow['pc_startTime']);
 	$dias = array("Domingo","Lunes","Martes","Miercoles","Jueves","Viernes","Sábado");
@@ -274,9 +323,12 @@ function cron_setmessage($prow, $db_email_msg)
 	$DATE = $dias[date('w',$dtWrk)]." ".date('d',$dtWrk)." de ".$meses[date('n',$dtWrk)-1]. " del ".date('Y',$dtWrk) ;
     $STARTTIME = date("H:i", $dtWrk);
     $ENDTIME = $prow['pc_endTime'];
-    $FACILITY = $prow['facility_name'];
-    $find_array = array('***NAME***' , '***PROVIDER***' , '***DATE***' , '***STARTTIME***' , '***ENDTIME***', '***FACILITY***');
-    $replace_array = array($NAME , $PROVIDER , $DATE , $STARTTIME , $ENDTIME, $FACILITY);
+    $FACILITY_NAME = $prow['facility_name'];
+    $FACILITY_ADDRESS = $prow['facility_address'];
+    $FACILITY_PHONE = $prow['facility_phone'];
+    $find_array = array('***NAME***' , '***PROVIDER***' , '***DATE***' , '***STARTTIME***' , '***ENDTIME***', '***FACILITY_NAME***', 
+                        '***FACILITY_ADDRESS***', '***FACILITY_PHONE***');
+    $replace_array = array($NAME , $PROVIDER , $DATE , $STARTTIME , $ENDTIME, $FACILITY_NAME , $FACILITY_ADDRESS , $FACILITY_PHONE);
     $message = str_replace($find_array, $replace_array, $db_email_msg['message']);
     return $message;
 }

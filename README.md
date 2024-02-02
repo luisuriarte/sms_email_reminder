@@ -7,7 +7,9 @@ Son 3 archivos que se ejecutan mediante cron:
 - php cron_email_notification_esp.php  E-Mail en Español (Fecha, hora y días).
 - php cron_wsp_notification_esp.php  WhatsApp en Español (Fecha, hora y días).
 En los email, se envia mensaje con logo más archivo de invitación iCalendar "ical.ics".
-En WhatsApp un mensaje corto con archivo adjunto iCalendar "ical.ics".
+En WhatsApp son dos mensajes
+Uno con el logo de la clínica más el mensaje. Otro con archivo adjunto iCalendar 
+Eje.: "TURNO-fc65sc2a.ics" (8 caracteres aleatorio).
 Para envio de WhatsApp se usa la empresa https://ultramsg.com/ (En Octubre/2023, el 
 valor mensual es de U$S 39, envios ilimitados).
 Para que funcione bien en la tabla automatic_notification se debe

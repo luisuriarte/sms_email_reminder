@@ -1,0 +1,21 @@
+BEGIN:VCALENDAR
+METHOD:REQUEST
+PRODID:-//Microsoft Corporation//Outlook 11.0 MIMEDIR//EN
+VERSION:2.0
+BEGIN:VEVENT
+DTSTART;TZID=America/Argentina/Buenos_Aires:20231016T174500
+DTEND;TZID=America/Argentina/Buenos_Aires:20231016T180000
+LOCATION:Rivadavia 1156, San Carlos Centro, Santa Fe
+TRANSP:OPAQUE
+SEQUENCE:0
+UID:20231014T184355-444191570@origen.ar
+ORGANIZER;CN=Clínica:mailto:turnos@origen.ar
+ATTENDEE;PARTSTAT=ACCEPTED;CN=Luis Angel Uriarte;EMAIL=+5493404540440:mailto:+5493404540440
+DTSTAMP:20231014T214355Z
+SUMMARY:Turno en Clínica Comunitaria
+DESCRIPTION:Sr.  Luis Angel Uriarte, recuerde que tiene una cita con el médico medico2  Dos en nuestra clínica el Lunes 16 de Octubre del 2023, a partir de las 17:45. Por favor, si no puede presentarse le solicitamos envíe un mensaje a nuestro número de teléfono 3404540440. Gracias. ==== Clínica San Carlos ====
+URL:https://salud.origen.ar
+PRIORITY:5
+CLASS:PUBLIC
+END:VEVENT
+END:VCALENDAR
