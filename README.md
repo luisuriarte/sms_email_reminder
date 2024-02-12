@@ -14,6 +14,7 @@ Eje.: "ical.ics".
 Para envio de WhatsApp se usan 2 empresas 
  - https://ultramsg.com/ (En Octubre/2023, el valor mensual es de U$S 39 por instancia, envios ilimitados).
  - https://waapi.app (En febrero 2024 arranca desde U$S 6.5 por instancia con envios ilimitador).
+
 Para que funcione bien en la tabla automatic_notification se debe
 editar el campo type, en conjunto (entradas) debe quedar 'SMS','Email','WSP'.
 y agregar un registro con type igual a WSP.
