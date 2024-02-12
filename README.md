@@ -11,13 +11,15 @@ En los email, se envia mensaje con logo más archivo de invitación iCalendar "i
 En WhatsApp son dos mensajes
 Uno con el logo de la clínica más el mensaje. Otro con archivo adjunto iCalendar 
 Eje.: "ical.ics".
-Para envio de WhatsApp se usa la empresa https://ultramsg.com/ (En Octubre/2023, el 
-valor mensual es de U$S 39, envios ilimitados).
+Para envio de WhatsApp se usan 2 empresas 
+ - https://ultramsg.com/ (En Octubre/2023, el valor mensual es de U$S 39 por instancia, envios ilimitados).
+ - https://waapi.app (En febrero 2024 arranca desde U$S 6.5 por instancia con envios ilimitador).
 Para que funcione bien en la tabla automatic_notification se debe
 editar el campo type, en conjunto (entradas) debe quedar 'SMS','Email','WSP'.
 y agregar un registro con type igual a WSP.
 De la misma manera en la tabla notification_log modificar el campo type.
 Tambien es necesario hacerlo en la tabla notification-settings.
+Se debe agregar una linea en la tabla automatic_notification que contenga en el campo type 'WSP'.
 
 Configuración:
 
@@ -29,6 +31,9 @@ En ambas se pueden usar las variables: ***NAME***, ***PROVIDER***, ***DATE***, *
 ***FACILITY_NAME***, ***FACILITY_ADDRESS***, ***FACILITY_PHONE*** y ***FACILITY_EMAIL*** Son datos que se extraen
 de los campos de los Centros, el telefono debe estar en formato Normal, sin el cero ni el quince Ejemplo:
 1109876543. Los centros se establecen en Administración/Cínica/Centros.
-
-Los datos de WSP y EMail estan en Administracion/Configuración/Notificaciones
+En Admin/config/Marca(Branding) se bdebe agregar una URL real en Vínculo de soporte online.
+Los datos de WSP, EMail, APIKey e Instancias estan en Administracion/Configuración/Notificaciones
+Tambien se debe rellenar AiKey e Instacias en Miscelaneos / Herramienta de Comunicación para series /
+SMS/CORREO ELECTRONICO Ajustes Alerta. En estos casos el Nombre de Usuario es la Instancia y Agragar Clave Api
+La contraseña de usuario no pimporta.
 
