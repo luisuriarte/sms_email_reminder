@@ -14,7 +14,7 @@
 global $smsgateway_info;
 global $patient_info;
 global $data_info;
-
+global $gbl_time_zone;
 global $SMS_NOTIFICATION_HOUR;
 global $EMAIL_NOTIFICATION_HOUR;
 
@@ -68,17 +68,20 @@ if (!function_exists('my_print_r')) {
 // Purpose: send WhatsApp
 ////////////////////////////////////////////////////////////////////
 function cron_SendWSP($patient_phone, $vBody, $start_date, $end_date, $patient_name, $patient_email, $facility_name, 
-                    $facility_address, $facility_phone, $facility_email, $provider)
+                    $facility_address, $facility_phone, $facility_email, $provider, $SERVICE)
 {
     $SenderEmail = $GLOBALS['patient_reminder_sender_email'];
     // Luis: No funciona SMS_GATEWAY_USENAME ni SMS_GATEWAY_APIKEY de Globals, 
     // en cambio lo toma de la tabla notification_settings. Los valores se 
     // colocan atraves de Admin/Miscellaneous/Batch Communication Tool
     // Pestaña: SMS/Email Alert Settings (Sin usuario).
-    $INSTANCIA = $GLOBALS['SMS_GATEWAY_USENAME'];
-    $APIKEY = $GLOBALS['SMS_GATEWAY_APIKEY'];
+    $Instance = $GLOBALS['SMS_GATEWAY_USENAME'];
+    $ApiKey = $GLOBALS['SMS_GATEWAY_APIKEY'];
+	$url_base = "https://hcd.origen.ar/modules/sms_email_reminder/";
+	$url_logo_wsp = $url_base . "logo_wsp.png";
+    //$url_logo_wsp = "https://previews.123rf.com/images/redgrphc/redgrphc2207/redgrphc220700462/189349247-dise%C3%B1o-de-vector-de-plantilla-de-logotipo-de-ilustraci%C3%B3n-cruzada-m%C3%A9dica.jpg";
     $todaystamp = gmdate("Ymd\THis\Z");
-	
+
     //Create unique identifier
     $cal_uid = date('Ymd').'T'.date('His')."-".rand()."@origen.ar";
 
@@ -112,90 +115,158 @@ END:VALARM
 END:VEVENT
 END:VCALENDAR';
 
-    $params=array(
-        'token' => $APIKEY,
-        'to' => $patient_phone,
-        'image' => 'https://hcd.origen.ar/modules/sms_email_reminder/logo_wsp.png',
-        'caption' => $vBody
-        );
-        $curl = curl_init();
-        curl_setopt_array($curl, array(
-          CURLOPT_URL => "https://api.ultramsg.com/{$INSTANCIA}/messages/image",
-          CURLOPT_RETURNTRANSFER => true,
-          CURLOPT_ENCODING => "",
-          CURLOPT_MAXREDIRS => 10,
-          CURLOPT_TIMEOUT => 30,
-          CURLOPT_SSL_VERIFYHOST => 0,
-          CURLOPT_SSL_VERIFYPEER => 0,
-          CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-          CURLOPT_CUSTOMREQUEST => "POST",
-          CURLOPT_POSTFIELDS => http_build_query($params),
-          CURLOPT_HTTPHEADER => array(
-            "content-type: application/x-www-form-urlencoded"
-          ),
-        ));
-        
-        $response = curl_exec($curl);
-        $err = curl_error($curl);
-        
-        curl_close($curl);
-        
-        if ($err) {
-          echo "cURL Error #:" . $err;
-        } else {
-          echo $response;
-        }
+    if ($SERVICE == "WaApi") {
+        $ChatId = "549" . $patient_phone . "@c.us";
+        // Para waapi.app Primero envio Imagen con Texto
+        $body_json = json_encode([
+        "chatId" => $ChatId,
+        "mediaUrl" => $url_logo_wsp,
+        //"mediaUrl" => "https://www.buscadorcomercial.com.ar/avisos/logo_478.png",
+        "mediaCaption" => $vBody
+        ]);
 
-        //$fechaActual = date("Y-m-d_H-i-s");
-        //$archivo = ("TURNO-" . $fechaActual . ".ics");
-        //$archivo = "TURNO.ics";
+        require_once('../../vendor/autoload.php');
+
+        $client = new \GuzzleHttp\Client();
+
+        $response = $client->request(
+        'POST',
+        'https://waapi.app/api/v1/instances/' . $Instance . '/client/action/send-media',
+        [
+            'body' => $body_json,
+            'headers' => [
+            'accept' => 'application/json',
+            'content-type' => 'application/json',
+            'authorization' => 'Bearer ' .$ApiKey,
+            ],
+        ]
+        );
+
+        echo $response->getBody();
+        
+        //Para waapi.app Luego envio archivo icalendar con texto de "Presione...."
         $archivo = "TURNO-" . substr(md5(time()), 0, 8) . ".ics";
         echo $archivo;
         $file_handle = fopen($archivo, 'w+');
         fwrite($file_handle, $ical_content);
 
-     $params = array(
-        'token' => $APIKEY,
-        'to' => $patient_phone,
-        'filename' => $archivo,
-        'document' => 'https://hcd.origen.ar/modules/sms_email_reminder/' . $archivo,
-        'caption' => $facility_name . ': Presione en el adjunto para verificar su turno. Gracias.'
-    );
+        $body_json = json_encode([
+            "chatId" => $ChatId,
+            "mediaUrl" => "https://www.buscadorcomercial.com.ar/avisos/logo_478.png",
+            //"mediaUrl" => $url_base . $archivo,
+            "mediaCaption" => $facility_name . ': Presione en el adjunto para verificar su turno. Gracias.'
+            ]);
+    
+            // require_once('../../vendor/autoload.php');
+    
+            $client = new \GuzzleHttp\Client();
+    
+            $response = $client->request(
+            'POST',
+            'https://waapi.app/api/v1/instances/' . $Instance . '/client/action/send-media',
+            [
+                'body' => $body_json,
+                'headers' => [
+                'accept' => 'application/json',
+                'content-type' => 'application/json',
+                'authorization' => 'Bearer ' .$ApiKey,
+                ],
+            ]
+            );
+    
+        echo $response->getBody();
         
-    $curl = curl_init();
-        curl_setopt_array($curl, array(
-          CURLOPT_URL => "https://api.ultramsg.com/{$INSTANCIA}/messages/document",
-          CURLOPT_RETURNTRANSFER => true,
-          CURLOPT_ENCODING => "",
-          CURLOPT_MAXREDIRS => 10,
-          CURLOPT_TIMEOUT => 30,
-          CURLOPT_SSL_VERIFYHOST => 0,
-          CURLOPT_SSL_VERIFYPEER => 0,
-          CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-          CURLOPT_CUSTOMREQUEST => "POST",
-          CURLOPT_POSTFIELDS => http_build_query($params),
-          CURLOPT_HTTPHEADER => array(
-            "content-type: application/x-www-form-urlencoded"
-          ),
-        ));
-        
-        $response = curl_exec($curl);
-        $err = curl_error($curl);
-        
-        curl_close($curl);
-        
-        if ($err) {
-          echo "cURL Error #:" . $err;
-        } else {
-          echo $response;
-        }
-    If (unlink($archivo)) {
-         // archivo borrado
-        } else {
-         // problema al borrar archivo 
-     }    
- 
+    }    
+    
+    if ($SERVICE == "UltraMSG") {
+        // Para UltraMSG Primero envio Imagen con Texto
+        $wsp = "+549" . $patient_phone;
+        $params=array(
+            'token' => $ApiKey,
+            'to' => $wsp,
+            //'image' => 'https://www.buscadorcomercial.com.ar/avisos/logo_478.png',
+            'image' => $url_logo_wsp,
+            'caption' => $vBody
+            );
+            $curl = curl_init();
+            curl_setopt_array($curl, array(
+              CURLOPT_URL => "https://api.ultramsg.com/{$Instance}/messages/image",
+              CURLOPT_RETURNTRANSFER => true,
+              CURLOPT_ENCODING => "",
+              CURLOPT_MAXREDIRS => 10,
+              CURLOPT_TIMEOUT => 30,
+              CURLOPT_SSL_VERIFYHOST => 0,
+              CURLOPT_SSL_VERIFYPEER => 0,
+              CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+              CURLOPT_CUSTOMREQUEST => "POST",
+              CURLOPT_POSTFIELDS => http_build_query($params),
+              CURLOPT_HTTPHEADER => array(
+                "content-type: application/x-www-form-urlencoded"
+              ),
+            ));
+            
+            $response = curl_exec($curl);
+            $err = curl_error($curl);
+            
+            curl_close($curl);
+            
+            if ($err) {
+              echo "cURL Error #:" . $err;
+            } else {
+              echo $response;
+            }
+    
+            // Para UltraMSG Luego envio archivo icalendar con texto: "Presione adjunto..."
+            $archivo = "TURNO-" . substr(md5(time()), 0, 8) . ".ics";
+            echo $archivo;
+            $file_handle = fopen($archivo, 'w+');
+            fwrite($file_handle, $ical_content);
+    
+         $params = array(
+            'token' => $ApiKey,
+            'to' => $wsp,
+            'filename' => $url_base . $archivo,
+            //'filename' => "https://previews.123rf.com/images/redgrphc/redgrphc2207/redgrphc220700462/189349247-dise%C3%B1o-de-vector-de-plantilla-de-logotipo-de-ilustraci%C3%B3n-cruzada-m%C3%A9dica.jpg",
+            'document' => "TURNO.ics",
+            'caption' => $facility_name . ': Presione en el adjunto para verificar su turno. Gracias.'
+        );
+            
+        $curl = curl_init();
+            curl_setopt_array($curl, array(
+              CURLOPT_URL => "https://api.ultramsg.com/{$Instance}/messages/document",
+              CURLOPT_RETURNTRANSFER => true,
+              CURLOPT_ENCODING => "",
+              CURLOPT_MAXREDIRS => 10,
+              CURLOPT_TIMEOUT => 30,
+              CURLOPT_SSL_VERIFYHOST => 0,
+              CURLOPT_SSL_VERIFYPEER => 0,
+              CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+              CURLOPT_CUSTOMREQUEST => "POST",
+              CURLOPT_POSTFIELDS => http_build_query($params),
+              CURLOPT_HTTPHEADER => array(
+                "content-type: application/x-www-form-urlencoded"
+              ),
+            ));
+            
+            $response = curl_exec($curl);
+            $err = curl_error($curl);
+            
+            curl_close($curl);
+            
+            if ($err) {
+              echo "cURL Error #:" . $err;
+            } else {
+              echo $response;
+            }
+    }
+        If (unlink($archivo)) {
+            // archivo borrado
+           } else {
+            // problema al borrar archivo 
+        }    
+
 }
+
 ////////////////////////////////////////////////////////////////////
 // Function:    cron_updateentry
 // Purpose: update status yes if alert send to patient
@@ -326,9 +397,10 @@ function cron_setmessage($prow, $db_email_msg)
     $FACILITY_NAME = $prow['facility_name'];
     $FACILITY_ADDRESS = $prow['facility_address'];
     $FACILITY_PHONE = $prow['facility_phone'];
+    $FACILITY_EMAIL = $prow['facility_email'];
     $find_array = array('***NAME***' , '***PROVIDER***' , '***DATE***' , '***STARTTIME***' , '***ENDTIME***', '***FACILITY_NAME***', 
-                        '***FACILITY_ADDRESS***', '***FACILITY_PHONE***');
-    $replace_array = array($NAME , $PROVIDER , $DATE , $STARTTIME , $ENDTIME, $FACILITY_NAME , $FACILITY_ADDRESS , $FACILITY_PHONE);
+                        '***FACILITY_ADDRESS***', '***FACILITY_PHONE***', '***FACILITY_EMAIL***');
+    $replace_array = array($NAME , $PROVIDER , $DATE , $STARTTIME , $ENDTIME, $FACILITY_NAME , $FACILITY_ADDRESS , $FACILITY_PHONE, $FACILITY_EMAIL);
     $message = str_replace($find_array, $replace_array, $db_email_msg['message']);
     return $message;
 }

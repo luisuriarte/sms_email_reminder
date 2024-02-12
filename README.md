@@ -2,14 +2,15 @@ Reemplaza los archivos de OpenEMR para poder enviar Mail y WhatsApp para las cit
 Es necesario crear el directorio logs.
 Estos se colocan en la carpeta openemr/modules/sms_email_reminder.
 Deben ejecutar por cron cada una hora.
-Son 3 archivos que se ejecutan mediante cron:
+Son 4 archivos que se ejecutan mediante cron:
 - php cron_email_notification_en.php  E-Mail en Ingles (Fecha, hora y días).
 - php cron_email_notification_esp.php  E-Mail en Español (Fecha, hora y días).
-- php cron_wsp_notification_esp.php  WhatsApp en Español (Fecha, hora y días).
+- php cron_ultra_notification_esp.php  WhatsApp en Español (Fecha, hora y días).
+- php cron_wappi_notification_esp.php  WhatsApp en Español (Fecha, hora y días).
 En los email, se envia mensaje con logo más archivo de invitación iCalendar "ical.ics".
 En WhatsApp son dos mensajes
 Uno con el logo de la clínica más el mensaje. Otro con archivo adjunto iCalendar 
-Eje.: "TURNO-fc65sc2a.ics" (8 caracteres aleatorio).
+Eje.: "ical.ics".
 Para envio de WhatsApp se usa la empresa https://ultramsg.com/ (En Octubre/2023, el 
 valor mensual es de U$S 39, envios ilimitados).
 Para que funcione bien en la tabla automatic_notification se debe
@@ -17,3 +18,17 @@ editar el campo type, en conjunto (entradas) debe quedar 'SMS','Email','WSP'.
 y agregar un registro con type igual a WSP.
 De la misma manera en la tabla notification_log modificar el campo type.
 Tambien es necesario hacerlo en la tabla notification-settings.
+
+Configuración:
+
+Los mensajes se establecen en Miscelaneos/Herramientas Comunicacion en Serie
+Alli en Notificacion de SMS/WSP para Whatsapp y en Notificación para Correo Electrónico
+En ambas se pueden usar las variables: ***NAME***, ***PROVIDER***, ***DATE***, ***STARTTIME***
+***ENDTIME***, ***FACILITY_ADDRESS***, ***FACILITY_PHONE***, ***FACILITY_NAME*** y ***FACILITY_EMAIL***
+
+***FACILITY_NAME***, ***FACILITY_ADDRESS***, ***FACILITY_PHONE*** y ***FACILITY_EMAIL*** Son datos que se extraen
+de los campos de los Centros, el telefono debe estar en formato Normal, sin el cero ni el quince Ejemplo:
+1109876543. Los centros se establecen en Administración/Cínica/Centros.
+
+Los datos de WSP y EMail estan en Administracion/Configuración/Notificaciones
+

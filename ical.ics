@@ -3,18 +3,19 @@ METHOD:REQUEST
 PRODID:-//Microsoft Corporation//Outlook 11.0 MIMEDIR//EN
 VERSION:2.0
 BEGIN:VEVENT
-DTSTART;TZID=America/Argentina/Buenos_Aires:20231016T174500
-DTEND;TZID=America/Argentina/Buenos_Aires:20231016T180000
-LOCATION:Rivadavia 1156, San Carlos Centro, Santa Fe
+DTSTART;TZID=America/Argentina/Buenos_Aires:20231129T144500
+DTEND;TZID=America/Argentina/Buenos_Aires:20231129T150000
+LOCATION:Rivadavia 98, San Carlos Centro, Santa Fe
 TRANSP:OPAQUE
 SEQUENCE:0
-UID:20231014T184355-444191570@origen.ar
-ORGANIZER;CN=Clínica:mailto:turnos@origen.ar
-ATTENDEE;PARTSTAT=ACCEPTED;CN=Luis Angel Uriarte;EMAIL=+5493404540440:mailto:+5493404540440
-DTSTAMP:20231014T214355Z
-SUMMARY:Turno en Clínica Comunitaria
-DESCRIPTION:Sr.  Luis Angel Uriarte, recuerde que tiene una cita con el médico medico2  Dos en nuestra clínica el Lunes 16 de Octubre del 2023, a partir de las 17:45. Por favor, si no puede presentarse le solicitamos envíe un mensaje a nuestro número de teléfono 3404540440. Gracias. ==== Clínica San Carlos ====
-URL:https://salud.origen.ar
+UID:20231127T135002-1664583529@origen.ar
+ORGANIZER;CN=Medica  Uno:mailto:centroc@origen.ar
+ATTENDEE;PARTSTAT=ACCEPTED;CN=Luis Angel Uriarte;EMAIL=luisuriarte@gmail.com:mailto:luisuriarte@gmail.com
+CONTACT:Centro Comunitario\, +5493404540440\,centroc@origen.ar
+DTSTAMP:20231127T165002Z
+SUMMARY:Turno en Centro Comunitario
+DESCRIPTION:Mr. Luis Angel Uriarte, recuerde que tiene una cita con el médico Medica  Uno en nuestra clínica el Miercoles 29 de Noviembre del 2023, a partir de las 14:45 ubicada en Rivadavia 98, San Carlos Centro, Santa Fe. Por favor, si no puede presentarse le solicitamos envíe un mensaje a nuestro número de teléfono +5493404540440. Gracias. Centro Comunitario
+URL;VALUE=URI:https://salud.origen.ar
 PRIORITY:5
 CLASS:PUBLIC
 END:VEVENT

@@ -59,8 +59,8 @@ METHOD:REQUEST
 PRODID:-//Microsoft Corporation//Outlook 11.0 MIMEDIR//EN
 VERSION:2.0
 BEGIN:VEVENT
-DTSTART;TZID=America/Argentina/Buenos_Aires:' . dateToCal($start_date) . '
-DTEND;TZID=America/Argentina/Buenos_Aires:' . dateToCal($end_date) . '
+DTSTART;TZID=' . $GLOBALS['gbl_time_zone'] . ':' . dateToCal($start_date) . '
+DTEND;TZID=' . $GLOBALS['gbl_time_zone'] . ':' . dateToCal($end_date) . '
 LOCATION:' . $facility_address . '
 TRANSP:OPAQUE
 SEQUENCE:0
@@ -71,7 +71,7 @@ CONTACT:' . $facility_name . '\, ' . $facility_phone . '\, ' . $facility_email .
 DTSTAMP:' . $todaystamp . '
 SUMMARY:Turno en ' . $facility_name . '
 DESCRIPTION:' . $vBody . '
-URL;VALUE=URI:https://salud.origen.ar
+URL;VALUE=URI:' . $GLOBALS['online_support_link'] . '
 PRIORITY:5
 CLASS:PUBLIC
 BEGIN:VALARM
@@ -293,9 +293,10 @@ function cron_setmessage($prow, $db_email_msg)
     $FACILITY_NAME = $prow['facility_name'];
     $FACILITY_ADDRESS = $prow['facility_address'];
     $FACILITY_PHONE = $prow['facility_phone'];
+    $FACILITY_EMAIL = $prow['facility_email'];
     $find_array = array('***NAME***' , '***PROVIDER***' , '***DATE***' , '***STARTTIME***' , '***ENDTIME***', '***FACILITY_NAME***', 
-                        '***FACILITY_ADDRESS***', '***FACILITY_PHONE***');
-    $replace_array = array($NAME , $PROVIDER , $DATE , $STARTTIME , $ENDTIME, $FACILITY_NAME , $FACILITY_ADDRESS , $FACILITY_PHONE);
+                        '***FACILITY_ADDRESS***', '***FACILITY_PHONE***', '***FACILITY_EMAIL***');
+    $replace_array = array($NAME , $PROVIDER , $DATE , $STARTTIME , $ENDTIME, $FACILITY_NAME , $FACILITY_ADDRESS , $FACILITY_PHONE, $FACILITY_EMAIL);
     $message = str_replace($find_array, $replace_array, $db_email_msg['message']);
     return $message;
 }
