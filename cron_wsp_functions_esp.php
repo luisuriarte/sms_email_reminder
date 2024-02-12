@@ -226,8 +226,8 @@ END:VCALENDAR';
             'token' => $ApiKey,
             'to' => $wsp,
             'filename' => $url_base . $archivo,
-            //'filename' => "https://previews.123rf.com/images/redgrphc/redgrphc2207/redgrphc220700462/189349247-dise%C3%B1o-de-vector-de-plantilla-de-logotipo-de-ilustraci%C3%B3n-cruzada-m%C3%A9dica.jpg",
-            'document' => "TURNO.ics",
+            //'filename' => 'https://previews.123rf.com/images/redgrphc/redgrphc2207/redgrphc220700462/189349247-dise%C3%B1o-de-vector-de-plantilla-de-logotipo-de-ilustraci%C3%B3n-cruzada-m%C3%A9dica.jpg',
+            'document' => 'TURNO.ics',
             'caption' => $facility_name . ': Presione en el adjunto para verificar su turno. Gracias.'
         );
             
