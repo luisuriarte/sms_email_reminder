@@ -50,8 +50,8 @@ if ($argc > 1 && $argv[2] == 'test') {
 
 $TYPE = "WSP";
 $CRON_TIME = 5;
-// $SERVICE = "UltraMSG";  //Aqui van los valores "UltraMSG" o "WaApi"
-$SERVICE = "UltraMSG";
+$SERVICE = "WaApi";  //Aqui van los valores "UltraMSG" o "WaApi"
+//$SERVICE = "UltraMSG";
 
 // set cron time (time to event ?) - todo extra tests
 $vectNotificationSettings = cron_GetNotificationSettings();
