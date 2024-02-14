@@ -2,11 +2,12 @@ Reemplaza los archivos de OpenEMR para poder enviar Mail y WhatsApp para las cit
 Es necesario crear el directorio logs.
 Estos se colocan en la carpeta openemr/modules/sms_email_reminder.
 Deben ejecutar por cron cada una hora.
-Son 4 archivos que se ejecutan mediante cron:
+Son 3 archivos que se ejecutan mediante cron:
+
 - php cron_email_notification_en.php  E-Mail en Ingles (Fecha, hora y días).
 - php cron_email_notification_esp.php  E-Mail en Español (Fecha, hora y días).
-- php cron_ultra_notification_esp.php  WhatsApp en Español (Fecha, hora y días).
-- php cron_wappi_notification_esp.php  WhatsApp en Español (Fecha, hora y días).
+- php cron_wsp_notification_esp.php  WhatsApp en Español (Fecha, hora y días).
+
 En los email, se envia mensaje con logo más archivo de invitación iCalendar "ical.ics".
 En WhatsApp son dos mensajes
 Uno con el logo de la clínica más el mensaje. Otro con archivo adjunto iCalendar 
