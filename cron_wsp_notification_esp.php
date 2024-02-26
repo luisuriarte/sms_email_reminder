@@ -88,7 +88,13 @@ for ($p = 0; $p < count($db_patient); $p++) {
     $facility_address = $prow['facility_address'];
     $facility_phone = $prow['facility_phone'];
     $facility_email = $prow['facility_email'];
-    $provider = $prow['user_name'];
+    $facility_url = $prow['facility_website'];
+    $facility_vendor = $prow['service_vendor'];
+    $facility_instance = $prow['vendor_instance'];
+    $facility_api = $prow['vendor_api'];
+    $facility_logo = $prow['facility_logo_wsp'];
+    $provider_name = $prow['user_name'];
+
     $app_time_hour = round($app_time / 3600);
     $curr_total_hour = round(time() / 3600);
 
@@ -118,8 +124,12 @@ for ($p = 0; $p < count($db_patient); $p++) {
                 $facility_address,
                 $facility_phone,
                 $facility_email,
-                $provider,
-                $SERVICE               
+                $provider_name,
+                $facility_url,
+                $facility_vendor,
+                $facility_instance,
+                $facility_logo,
+                $facility_api
             );
         }
 

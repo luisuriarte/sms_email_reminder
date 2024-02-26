@@ -39,7 +39,7 @@ use PHPMailer\PHPMailer\Exception;
 use OpenEMR\Common\Crypto\CryptoGen;
 
 function cron_SendMail($patient_email, $cc, $subject, $vBody, $start_date, $end_date, $patient_name, $facility_name, 
-                        $facility_address, $facility_phone, $facility_email, $provider)
+                        $facility_address, $facility_phone, $facility_email, $facility_url, $provider, $logo_email)
 {
     // check if smtp globals set
     if ($GLOBALS['SMTP_HOST'] == '') {
@@ -63,8 +63,8 @@ function cron_SendMail($patient_email, $cc, $subject, $vBody, $start_date, $end_
 
         $todaystamp = gmdate("Ymd\THis\Z");
 
-       	//Create unique identifier
-		$cal_uid = date('Ymd').'T'.date('His')."-".rand()."@origen.ar";
+        //Create unique identifier
+        $cal_uid = date('Ymd').'T'.date('His')."-".rand().substr($facility_url, 9);
 
 		//Create ICAL Content (Google rfc 2445 for details and examples of usage)
 		$ical_content = 'BEGIN:VCALENDAR
@@ -84,7 +84,7 @@ CONTACT:' . $facility_name . '\, ' . $facility_phone . '\, ' . $facility_email .
 DTSTAMP:' . $todaystamp . '
 SUMMARY:Turno en ' . $facility_name . '
 DESCRIPTION:' . $vBody . '
-URL;VALUE=URI:' . $GLOBALS['online_support_link'] . '
+URL;VALUE=URI:' . $facility_url . '
 PRIORITY:5
 CLASS:PUBLIC
 BEGIN:VALARM
@@ -107,18 +107,18 @@ END:VCALENDAR';
 		$mail->Password = $cryptoGen->decryptStandard($GLOBALS['SMTP_PASS']);
 		$mail->SMTPSecure = $GLOBALS['SMTP_SECURE'];
     	$mail->CharSet = "UTF-8";
-		$mail->From = $SenderEmail;
-		$mail->FromName = $SenderName;
+		$mail->From = $facility_email;
+		$mail->FromName = $facility_name;
 		$mail->AddAddress($patient_email);
 		// $mail->addCC($cc); //Remove comment to send, also to trusted mail
 		$mail->WordWrap = 50;
 		$mail->IsHTML(true);
 		$mail->Subject = $subject;
-		$mail->AddEmbeddedImage("logo.png", "logo", "logo.png");
+		$mail->AddEmbeddedImage($logo_email, "logo", "logo.png");
 		$html = <<<EOT
 			<div>
 				<img src="cid:logo"> 
-				<p><b><i><big>$vBody</big></i></b></p>
+				<p>$vBody</p>
 			</div>
 		EOT;
 		$mail->Body = $html;
@@ -232,9 +232,11 @@ function cron_getAlertpatientData($type)
     $query = "SELECT $patient_field ope.pc_eid, ope.pc_pid, ope.pc_title,
                     ope.pc_hometext, ope.pc_eventDate, ope.pc_endDate,
                     ope.pc_duration, ope.pc_alldayevent, ope.pc_startTime, ope.pc_endTime,
-                    CONCAT(u.fname, ' ', u.mname, ' ', u.lname) AS user_name, pte.pt_tracker_id,
+                    CONCAT(u.fname, ' ', u.mname, ' ', u.lname) AS user_name, u.suffix AS user_preffix, pte.pt_tracker_id,
                     pte.status, pt.lastseq, f.name AS facility_name, CONCAT(f.street, ', ', f.city, ', ', f.state)
-                    AS facility_address, f.phone AS facility_phone, f.email AS facility_email 
+                    AS facility_address, f.phone AS facility_phone, f.email AS facility_email, f.facility_code AS
+                    service_vendor, f.facility_npi AS vendor_instance, f.oid AS vendor_api, f.website AS facility_website,
+                    f.attn AS facility_logo_email, f.domain_identifier AS facility_logo_wsp 
             FROM openemr_postcalendar_events AS ope
             LEFT OUTER JOIN patient_tracker AS pt ON pt.pid = ope.pc_pid 
             AND pt.apptdate = ope.pc_eventDate 
@@ -324,9 +326,10 @@ function cron_setmessage($prow, $db_email_msg)
     $FACILITY_ADDRESS = $prow['facility_address'];
     $FACILITY_PHONE = $prow['facility_phone'];
     $FACILITY_EMAIL = $prow['facility_email'];
-    $find_array = array('***NAME***' , '***PROVIDER***' , '***DATE***' , '***STARTTIME***' , '***ENDTIME***', '***FACILITY_NAME***', 
+    $PROVIDER_PREFFIX = $prow['user_preffix'];
+    $find_array = array('***NAME***' , '***PROVIDER***', '***PROVIDER_PREFFIX***' , '***DATE***' , '***STARTTIME***' , '***ENDTIME***', '***FACILITY_NAME***', 
                         '***FACILITY_ADDRESS***', '***FACILITY_PHONE***', '***FACILITY_EMAIL***');
-    $replace_array = array($NAME , $PROVIDER , $DATE , $STARTTIME , $ENDTIME, $FACILITY_NAME , $FACILITY_ADDRESS , $FACILITY_PHONE, $FACILITY_EMAIL);
+    $replace_array = array($NAME , $PROVIDER, $PROVIDER_PREFFIX , $DATE , $STARTTIME , $ENDTIME, $FACILITY_NAME , $FACILITY_ADDRESS , $FACILITY_PHONE, $FACILITY_EMAIL);
     $message = str_replace($find_array, $replace_array, $db_email_msg['message']);
     return $message;
 }

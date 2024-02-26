@@ -68,22 +68,18 @@ if (!function_exists('my_print_r')) {
 // Purpose: send WhatsApp
 ////////////////////////////////////////////////////////////////////
 function cron_SendWSP($patient_phone, $vBody, $start_date, $end_date, $patient_name, $patient_email, $facility_name, 
-                    $facility_address, $facility_phone, $facility_email, $provider, $SERVICE)
+                    $facility_address, $facility_phone, $facility_email, $provider, $facility_url, $facility_vendor,
+                    $facility_instance, $facility_logo, $facility_api)
 {
-    $SenderEmail = $GLOBALS['patient_reminder_sender_email'];
-    // Luis: No funciona SMS_GATEWAY_USENAME ni SMS_GATEWAY_APIKEY de Globals, 
-    // en cambio lo toma de la tabla notification_settings. Los valores se 
-    // colocan atraves de Admin/Miscellaneous/Batch Communication Tool
-    // Pestaña: SMS/Email Alert Settings (Sin usuario).
-    $Instance = $GLOBALS['SMS_GATEWAY_USENAME'];
-    $ApiKey = $GLOBALS['SMS_GATEWAY_APIKEY'];
-	$url_base = "https://hcd.origen.ar/modules/sms_email_reminder/";
-	$url_logo_wsp = $url_base . "logo_wsp.png";
-    //$url_logo_wsp = "https://previews.123rf.com/images/redgrphc/redgrphc2207/redgrphc220700462/189349247-dise%C3%B1o-de-vector-de-plantilla-de-logotipo-de-ilustraci%C3%B3n-cruzada-m%C3%A9dica.jpg";
+
+    $Instance = $facility_instance;
+    $ApiKey = $facility_api;
+	$url_base = $facility_url . "/modules/sms_email_reminder/";
+	$url_logo_wsp = $url_base . $facility_logo;
     $todaystamp = gmdate("Ymd\THis\Z");
 
     //Create unique identifier
-    $cal_uid = date('Ymd').'T'.date('His')."-".rand()."@origen.ar";
+    $cal_uid = date('Ymd').'T'.date('His')."-".rand().substr($facility_url, 8);
 
     //Create ICAL Content (Google rfc 2445 for details and examples of usage)
     $ical_content = 'BEGIN:VCALENDAR
@@ -103,7 +99,7 @@ CONTACT:' . $facility_name . '\, ' . $facility_phone . '\,' . $facility_email . 
 DTSTAMP:' . $todaystamp . '
 SUMMARY:Turno en ' . $facility_name . '
 DESCRIPTION:' . $vBody . '
-URL;VALUE=URI:' . $GLOBALS['online_support_link'] . '
+URL;VALUE=URI:' . $facility_url . '
 PRIORITY:5
 CLASS:PUBLIC
 BEGIN:VALARM
@@ -114,14 +110,16 @@ ACTION:DISPLAY
 END:VALARM
 END:VEVENT
 END:VCALENDAR';
+$archivo = "TURNO-" . substr(md5(time()), 0, 8) . ".ics";
+$file_handle = fopen($archivo, 'w+');
+fwrite($file_handle, $ical_content);
 
-    if ($SERVICE == "WaApi") {
+    if ($facility_vendor == "WaApi") {
         $ChatId = "549" . $patient_phone . "@c.us";
         // Para waapi.app Primero envio Imagen con Texto
         $body_json = json_encode([
         "chatId" => $ChatId,
         "mediaUrl" => $url_logo_wsp,
-        //"mediaUrl" => "https://www.buscadorcomercial.com.ar/avisos/logo_478.png",
         "mediaCaption" => $vBody
         ]);
 
@@ -145,15 +143,10 @@ END:VCALENDAR';
         echo $response->getBody();
         
         //Para waapi.app Luego envio archivo icalendar con texto de "Presione...."
-        $archivo = "TURNO-" . substr(md5(time()), 0, 8) . ".ics";
-        echo $archivo;
-        $file_handle = fopen($archivo, 'w+');
-        fwrite($file_handle, $ical_content);
-
         $body_json = json_encode([
             "chatId" => $ChatId,
-            "mediaUrl" => "https://www.buscadorcomercial.com.ar/avisos/logo_478.png",
-            //"mediaUrl" => $url_base . $archivo,
+            "mediaUrl" => $url_base . $archivo,
+            "mediaName" => "TURNO.ics",
             "mediaCaption" => $facility_name . ': Presione en el adjunto para verificar su turno. Gracias.'
             ]);
     
@@ -178,13 +171,12 @@ END:VCALENDAR';
         
     }    
     
-    if ($SERVICE == "UltraMSG") {
+    if ($facility_vendor == "UltraMSG") {
         // Para UltraMSG Primero envio Imagen con Texto
         $wsp = "+549" . $patient_phone;
         $params=array(
             'token' => $ApiKey,
             'to' => $wsp,
-            //'image' => 'https://www.buscadorcomercial.com.ar/avisos/logo_478.png',
             'image' => $url_logo_wsp,
             'caption' => $vBody
             );
@@ -217,17 +209,11 @@ END:VCALENDAR';
             }
     
             // Para UltraMSG Luego envio archivo icalendar con texto: "Presione adjunto..."
-            $archivo = "TURNO-" . substr(md5(time()), 0, 8) . ".ics";
-            echo $archivo;
-            $file_handle = fopen($archivo, 'w+');
-            fwrite($file_handle, $ical_content);
-    
          $params = array(
             'token' => $ApiKey,
             'to' => $wsp,
-            'filename' => $url_base . $archivo,
-            //'filename' => 'https://previews.123rf.com/images/redgrphc/redgrphc2207/redgrphc220700462/189349247-dise%C3%B1o-de-vector-de-plantilla-de-logotipo-de-ilustraci%C3%B3n-cruzada-m%C3%A9dica.jpg',
-            'document' => 'TURNO.ics',
+            'filename' => 'TURNO.ics',
+            'document' => $url_base . $archivo,
             'caption' => $facility_name . ': Presione en el adjunto para verificar su turno. Gracias.'
         );
             
@@ -259,7 +245,8 @@ END:VCALENDAR';
               echo $response;
             }
     }
-        If (unlink($archivo)) {
+        
+    If (unlink($archivo)) {
             // archivo borrado
            } else {
             // problema al borrar archivo 
@@ -305,9 +292,11 @@ function cron_getAlertpatientData($type)
     $query = "SELECT $patient_field ope.pc_eid, ope.pc_pid, ope.pc_title,
                     ope.pc_hometext, ope.pc_eventDate, ope.pc_endDate,
                     ope.pc_duration, ope.pc_alldayevent, ope.pc_startTime, ope.pc_endTime,
-                    CONCAT(u.fname, ' ', u.mname, ' ', u.lname) user_name, pte.pt_tracker_id,
+                    CONCAT(u.fname, ' ', u.mname, ' ', u.lname) user_name, u.suffix AS user_preffix, pte.pt_tracker_id,
                     pte.status, pt.lastseq, f.name AS facility_name, CONCAT(f.street, ', ', f.city, ', ', f.state)
-                    AS facility_address, f.phone AS facility_phone, f.email AS facility_email
+                    AS facility_address, f.phone AS facility_phone, f.email AS facility_email, f.facility_code AS
+                    service_vendor, f.facility_npi AS vendor_instance, f.oid AS vendor_api, f.website AS facility_website,
+                    f.attn AS facility_logo_email, f.domain_identifier AS facility_logo_wsp
             FROM openemr_postcalendar_events AS ope
             LEFT OUTER JOIN patient_tracker AS pt ON pt.pid = ope.pc_pid 
             AND pt.apptdate = ope.pc_eventDate 
@@ -398,9 +387,10 @@ function cron_setmessage($prow, $db_email_msg)
     $FACILITY_ADDRESS = $prow['facility_address'];
     $FACILITY_PHONE = $prow['facility_phone'];
     $FACILITY_EMAIL = $prow['facility_email'];
-    $find_array = array('***NAME***' , '***PROVIDER***' , '***DATE***' , '***STARTTIME***' , '***ENDTIME***', '***FACILITY_NAME***', 
+    $PROVIDER_PREFFIX = $prow['user_preffix'];
+    $find_array = array('***NAME***' , '***PROVIDER***', '***PROVIDER_PREFFIX***' , '***DATE***' , '***STARTTIME***' , '***ENDTIME***', '***FACILITY_NAME***', 
                         '***FACILITY_ADDRESS***', '***FACILITY_PHONE***', '***FACILITY_EMAIL***');
-    $replace_array = array($NAME , $PROVIDER , $DATE , $STARTTIME , $ENDTIME, $FACILITY_NAME , $FACILITY_ADDRESS , $FACILITY_PHONE, $FACILITY_EMAIL);
+    $replace_array = array($NAME , $PROVIDER, $PROVIDER_PREFFIX , $DATE , $STARTTIME , $ENDTIME, $FACILITY_NAME , $FACILITY_ADDRESS , $FACILITY_PHONE, $FACILITY_EMAIL);
     $message = str_replace($find_array, $replace_array, $db_email_msg['message']);
     return $message;
 }
