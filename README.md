@@ -103,7 +103,7 @@ datos de Nombre del Centro, Teléfono, EMail, APIKey, Instancias, url
 Wsp y Logo email e deben colocar en los Centros, en campos no
 utilizados:</span></font></p>
 <p style="line-height: 100%; margin-bottom: 0cm"><font color="#cccccc"><span style="background: #1f1f1f">Phone
--&gt; Whatsapp</span></font></p>
+-&gt; Whatsapp (Formato estandar, sin +549, sin 0 ni 15 y sin espacios ni guiones: ej. 1148654201) </span></font></p>
 <p style="line-height: 100%; margin-bottom: 0cm"><font color="#cccccc"><span style="background: #1f1f1f">Name
 -&gt; Nombre del Centro</span></font></p>
 <p style="line-height: 100%; margin-bottom: 0cm"><font color="#cccccc"><span style="background: #1f1f1f">Steet
