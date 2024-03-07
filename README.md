@@ -49,7 +49,7 @@ Alli en Notificacion de SMS/WSP para Whatsapp y en Notificación para Correo Ele
 
 En ambas se pueden usar las variables: '***NAME***', '***PROVIDER***', '***DATE***', '***STARTTIME***'
 
-'***ENDTIME***', '***FACILITY_ADDRESS***', '***FACILITY_PHONE***', '***FACILITY_NAME***' , '***FACILITY_EMAIL***'
+`***ENDTIME***`, `***FACILITY_ADDRESS***`, '***FACILITY_PHONE***', '***FACILITY_NAME***' , '***FACILITY_EMAIL***'
 
 y '***USER_PREFFIX***'
 
