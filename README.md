@@ -47,15 +47,15 @@ Los mensajes se establecen en Miscelaneos/Herramientas Comunicacion en Serie
 
 Alli en Notificacion de SMS/WSP para Whatsapp y en Notificación para Correo Electrónico
 
-En ambas se pueden usar las variables: "***NAME***", "***PROVIDER***", "***DATE***", "***STARTTIME***"
+En ambas se pueden usar las variables: '***NAME***', '***PROVIDER***', '***DATE***', '***STARTTIME***'
 
-"***ENDTIME***", "***FACILITY_ADDRESS***", "***FACILITY_PHONE***", "***FACILITY_NAME***" , "***FACILITY_EMAIL***"
+'***ENDTIME***', '***FACILITY_ADDRESS***', '***FACILITY_PHONE***', '***FACILITY_NAME***' , '***FACILITY_EMAIL***'
 
-y "***USER_PREFFIX***"
+y '***USER_PREFFIX***'
 
-"***USER PREFFIX***" Es el campo Suffix del Usuario.
+'***USER PREFFIX***' Es el campo Suffix del Usuario.
 
-"***FACILITY_NAME***", "***FACILITY_ADDRESS***", "***FACILITY_PHONE***" y "***FACILITY_EMAIL***" Son datos que se extraen
+'***FACILITY_NAME***', '***FACILITY_ADDRESS***', '***FACILITY_PHONE***' y '***FACILITY_EMAIL***' Son datos que se extraen
 
 de los campos de los Centros, el telefono debe estar en formato Normal, sin el cero ni el quince Ejemplo:
 
