@@ -7,7 +7,7 @@
  * @link      http://www.open-emr.org
  * @author    Larry Lart
  * @copyright Copyright (c) 2008 Larry Lart
- * @copyright Copyright (c) 2023 Luis A. Uriarte <luis.uriarte@gmail.com>
+ * @copyright Copyright (c) 2023 - 2024 Luis A. Uriarte <luis.uriarte@gmail.com>
  * @license   https://github.com/openemr/openemr/blob/master/LICENSE GNU General Public License 3
  */
 
@@ -15,6 +15,7 @@ global $smsgateway_info;
 global $patient_info;
 global $data_info;
 global $gbl_time_zone;
+global $zone;
 global $SMS_NOTIFICATION_HOUR;
 global $EMAIL_NOTIFICATION_HOUR;
 
@@ -77,6 +78,8 @@ function cron_SendWSP($patient_phone, $vBody, $start_date, $end_date, $patient_n
 	$url_base = $facility_url . "/modules/sms_email_reminder/";
 	$url_logo_wsp = $url_base . $facility_logo;
     $todaystamp = gmdate("Ymd\THis\Z");
+    //$zone = ($GLOBALS['gbl_time_zone'] ?? null);
+    $zone = "America/Argentina/Buenos_Aires";
 
     //Create unique identifier
     $cal_uid = date('Ymd').'T'.date('His')."-".rand().substr($facility_url, 8);
@@ -87,8 +90,8 @@ METHOD:REQUEST
 PRODID:-//Microsoft Corporation//Outlook 11.0 MIMEDIR//EN
 VERSION:2.0
 BEGIN:VEVENT
-DTSTART;TZID=' . $GLOBALS['gbl_time_zone'] . ':' . dateToCal($start_date) . '
-DTEND;TZID=' . $GLOBALS['gbl_time_zone'] . ':' . dateToCal($end_date) . '
+DTSTART;TZID=' . $zone . ':' . dateToCal($start_date) . '
+DTEND;TZID=' . $zone . ':' . dateToCal($end_date) . '
 LOCATION:' . $facility_address . '
 TRANSP:OPAQUE
 SEQUENCE:0
@@ -247,9 +250,9 @@ fwrite($file_handle, $ical_content);
     }
         
     If (unlink($archivo)) {
-            // archivo borrado
+            echo " Archivo borrado";
            } else {
-            // problema al borrar archivo 
+            echo " Problema al borrar archivo"; 
         }    
 
 }
@@ -387,10 +390,10 @@ function cron_setmessage($prow, $db_email_msg)
     $FACILITY_ADDRESS = $prow['facility_address'];
     $FACILITY_PHONE = $prow['facility_phone'];
     $FACILITY_EMAIL = $prow['facility_email'];
-    $PROVIDER_PREFFIX = $prow['user_preffix'];
-    $find_array = array('***NAME***' , '***PROVIDER***', '***PROVIDER_PREFFIX***' , '***DATE***' , '***STARTTIME***' , '***ENDTIME***', '***FACILITY_NAME***', 
+    $USER_PREFFIX = $prow['user_preffix'];
+    $find_array = array('***NAME***' , '***PROVIDER***', '***USER_PREFFIX***' , '***DATE***' , '***STARTTIME***' , '***ENDTIME***', '***FACILITY_NAME***', 
                         '***FACILITY_ADDRESS***', '***FACILITY_PHONE***', '***FACILITY_EMAIL***');
-    $replace_array = array($NAME , $PROVIDER, $PROVIDER_PREFFIX , $DATE , $STARTTIME , $ENDTIME, $FACILITY_NAME , $FACILITY_ADDRESS , $FACILITY_PHONE, $FACILITY_EMAIL);
+    $replace_array = array($NAME , $PROVIDER, $USER_PREFFIX , $DATE , $STARTTIME , $ENDTIME, $FACILITY_NAME , $FACILITY_ADDRESS , $FACILITY_PHONE, $FACILITY_EMAIL);
     $message = str_replace($find_array, $replace_array, $db_email_msg['message']);
     return $message;
 }

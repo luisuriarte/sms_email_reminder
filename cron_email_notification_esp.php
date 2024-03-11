@@ -7,7 +7,7 @@
  * @package OpenEMR
  * @author Larry Lart
  * @copyright Copyright (c) 2008 Larry Lart
- * @copyright Copyright (c) 2022 Luis A. Uriarte <luis.uriarte@gmail.com>
+ * @copyright Copyright (c) 2022-2024 Luis A. Uriarte <luis.uriarte@gmail.com>
  * @link https://www.open-emr.org
  * @license https://github.com/openemr/openemr/blob/master/LICENSE GNU General Public License 3
  */
@@ -75,6 +75,7 @@ for ($p = 0; $p < count($db_patient); $p++) {
     $facility_address = $prow['facility_address'];
     $facility_phone = $prow['facility_phone'];
     $facility_email = $prow['facility_email'];
+    $facility_url = $prow['facility_website'];
     $provider_name = $prow['user_name'];
     $provider_preffix = $prow['user_preffix'];
     $logo_email = $prow['facility_logo_email'];
