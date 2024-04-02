@@ -50,8 +50,6 @@ if ($argc > 1 && $argv[2] == 'test') {
 
 $TYPE = "WSP";
 $CRON_TIME = 5;
-$SERVICE = "WaApi";  //Aqui van los valores "UltraMSG" o "WaApi"
-//$SERVICE = "UltraMSG";
 
 // set cron time (time to event ?) - todo extra tests
 $vectNotificationSettings = cron_GetNotificationSettings();
@@ -142,7 +140,7 @@ for ($p = 0; $p < count($db_patient); $p++) {
         // Update patient_tracker table and insert a row in patient_tracker_element table
         manage_tracker_status($prow['pc_eventDate'], $prow['pc_startTime'], $eid, $pid, $user = 'Automático', $status = $TYPE, $room = '', $enc_id = '');
 
-        $strMsg .= " || ALERT SENT SUCCESSFULLY TO " . $prow['email'];
+        $strMsg .= " || Mensaje enviado al teléfono " . $patient_phone;
         $strMsg .= "\n" . $patient_info . "\n" . $smsgateway_info . "\n" . $data_info . "\n" . $db_email_msg['message'];
     }
 
