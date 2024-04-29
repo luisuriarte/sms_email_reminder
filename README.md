@@ -1,6 +1,6 @@
 Reemplaza los archivos de OpenEMR para poder enviar Mail y WhatsApp para las citas.
-Es necesario crear el directorio logs.
 Estos se colocan en la carpeta openemr/modules/sms_email_reminder.
+Antes es necesario crear en la misma carpeta otra carpeta llamada logs.
 Deben ejecutar por cron cada una hora.
 Que da a criterio si se envian el Email y tambien WhatsApp juntos o solo uno.
 Son 2 archivos que se ejecutan mediante cron:
