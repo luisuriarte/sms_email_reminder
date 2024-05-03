@@ -96,7 +96,7 @@ LOCATION:' . $facility_address . '
 TRANSP:OPAQUE
 SEQUENCE:0
 UID:' . $cal_uid . '
-ORGANIZER;CN=' . $provider . ':mailto:' . $facility_email . '
+ORGANIZER;CN=' . $facility_name . ':mailto:' . $facility_email . '
 ATTENDEE;PARTSTAT=ACCEPTED;CN=' . $patient_name . ';EMAIL=' . $patient_email . ':mailto:' . $patient_email . '
 CONTACT:' . $facility_name . '\, ' . $facility_phone . '\,' . $facility_email . '
 DTSTAMP:' . $todaystamp . '
