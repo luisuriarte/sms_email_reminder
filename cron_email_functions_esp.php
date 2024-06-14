@@ -64,8 +64,8 @@ function cron_SendMail($patient_email, $cc, $subject, $vBody, $start_date, $end_
         }
 
         $todaystamp = gmdate("Ymd\THis\Z");
-        //$zone = ($GLOBALS['gbl_time_zone'] ?? null);
-        $zone = "America/Argentina/Buenos_Aires";
+        $zone = $GLOBALS['gbl_time_zone'];
+        //$zone = "America/Argentina/Buenos_Aires";
         //Create unique identifier
         $cal_uid = date('Ymd').'T'.date('His')."-".rand().substr($facility_url, 9);
 

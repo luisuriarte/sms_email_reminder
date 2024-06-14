@@ -78,8 +78,8 @@ function cron_SendWSP($patient_phone, $vBody, $start_date, $end_date, $patient_n
 	$url_base = $facility_url . "/modules/sms_email_reminder/";
 	$url_logo_wsp = $url_base . $facility_logo;
     $todaystamp = gmdate("Ymd\THis\Z");
-    //$zone = ($GLOBALS['gbl_time_zone'] ?? null);
-    $zone = "America/Argentina/Buenos_Aires";
+    $zone = $GLOBALS['gbl_time_zone'];
+    //$zone = "America/Argentina/Buenos_Aires";
 
     //Create unique identifier
     $cal_uid = date('Ymd').'T'.date('His')."-".rand().substr($facility_url, 8);
