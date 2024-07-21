@@ -117,7 +117,7 @@ $archivo = "TURNO-" . substr(md5(time()), 0, 8) . ".ics";
 $file_handle = fopen($archivo, 'w+');
 fwrite($file_handle, $ical_content);
 
-    if ($facility_vendor == "WaApi") {
+    if (strtolower($facility_vendor) == "waapi") {
         $ChatId = "549" . $patient_phone . "@c.us";
         // Para waapi.app Primero envio Imagen con Texto
         $body_json = json_encode([
@@ -174,7 +174,7 @@ fwrite($file_handle, $ical_content);
         
     }    
     
-    if ($facility_vendor == "UltraMSG") {
+    if (strtolower($facility_vendor) == "ultramsg") {
         // Para UltraMSG Primero envio Imagen con Texto
         $wsp = "+549" . $patient_phone;
         $params=array(
