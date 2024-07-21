@@ -21,14 +21,14 @@ Para envio de WhatsApp se usan 2 empresas
 Para que funcione bien en la tabla automatic_notification se debe
 editar el campo type, en conjunto (entradas) debe quedar 'SMS','Email','WSP'.
 y agregar un registro con type igual a WSP.
-De la misma manera en la tabla notification_log modificar el campo type agreganto WSP.
+De la misma manera en la tabla notification_log modificar el campo type agregando WSP.
 
 Configuración:
 
 Los mensajes se establecen en Miscelaneos/Herramientas Comunicacion en Serie
 Alli en Notificacion de SMS/WSP para Whatsapp y en Notificación para Correo Electrónico
 
-En ambas se pueden usar las variables: '***NAME***', '***PROVIDER***', '***DATE***', '***STARTTIME***'
+En ambas se pueden usar las variables: "***NAME***", '***PROVIDER***', '***DATE***', '***STARTTIME***'
 
 '***ENDTIME***', '***FACILITY_ADDRESS***', '***FACILITY_PHONE***', '***FACILITY_NAME***' , '***FACILITY_EMAIL***'
 
