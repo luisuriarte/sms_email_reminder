@@ -54,3 +54,4 @@ logo Wsp y Logo email e deben colocar en los Centros, en campos no utilizados:
 - Facility_Npi -> Instancia
 - Facility_Code -> Empresa (WaApi, UltraMSG o WaSenderAPI)
 - Oid -> Clave API
+
