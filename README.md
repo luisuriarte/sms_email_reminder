@@ -15,8 +15,8 @@ Eje.: "ical.ics".
 
 Para envio de WhatsApp se usan 3 empresas
 
- - https://ultramsg.com/ (En Octubre/2023, el valor mensual es de U$S 39 por instancia, envios ilimitados).
- - https://waapi.app (En febrero 2024 arranca desde U$S 6.5 por instancia con envios ilimitados). *** Esta caido desde Mayo/2025. ***
+ - https://ultramsg.com/ (En Octubre/2023, el valor mensual es de U$S 39.00 por instancia, envios ilimitados).
+ - https://waapi.app (En febrero 2024 arranca desde U$S 6.5.00/mo por instancia con envios ilimitados). *** Esta caido desde Mayo/2025. ***
  - https://wasenderapi.com (En Julio 2025 arranca desde U$S 6.00/mo por instancia sin limites de mensajes).
 
 Para que funcione bien en la tabla automatic_notification se debe
