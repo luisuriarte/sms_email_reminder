@@ -250,6 +250,7 @@ fwrite($file_handle, $ical_content);
     }
 
     if (strtolower($facility_vendor) == "WaSenderAPI") {
+        // Para WaSenderAPI Primero envio Imagen con Texto
         $ChatId = "+549" . $patient_phone;
 
         require 'vendor/autoload.php'; // Assuming Guzzle is installed
