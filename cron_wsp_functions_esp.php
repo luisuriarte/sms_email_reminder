@@ -248,7 +248,71 @@ fwrite($file_handle, $ical_content);
               echo $response;
             }
     }
-        
+
+    if (strtolower($facility_vendor) == "WaSenderAPI") {
+        $ChatId = "+549" . $patient_phone;
+
+        require 'vendor/autoload.php'; // Assuming Guzzle is installed
+
+        use GuzzleHttp\Client;
+
+        $client = new Client();
+        $apiKey = $ApiKey;
+        $url = 'https://www.wasenderapi.com/api/send-message';
+
+        try {
+            $response = $client->post($url, [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $apiKey,
+                    'Content-Type' => 'application/json',
+                    'Accept' => 'application/json',
+                ],
+                'json' =>             [
+                    'to' => $ChatId,
+                    'text' => $vBody
+                    'imageUrl' => $url_logo_wsp,
+                    ]
+            ]);
+
+            echo $response->getBody();
+        } catch (\GuzzleHttp\Exception\RequestException $e) {
+            echo "Request failed: " . $e->getMessage();
+            if ($e->hasResponse()) {
+                echo "\nResponse: " . $e->getResponse()->getBody();
+            }
+        }
+
+        // Para WaSenderAPI Luego envio archivo icalendar con texto: "Presione adjunto..."
+        use GuzzleHttp\Client;
+
+        $client = new Client();
+        $apiKey = $ApiKey;
+        $url = 'https://www.wasenderapi.com/api/send-message';
+
+        try {
+            $response = $client->post($url, [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $apiKey,
+                    'Content-Type' => 'application/json',
+                    'Accept' => 'application/json',
+                ],
+                'json' =>             [
+                    'to' => $ChatId,
+                    'text' => $facility_name . ': Presione en el adjunto para verificar su turno. Gracias.',
+                    'documentUrl' => $url_base . $archivo,
+                    ]
+            ]);
+
+            echo $response->getBody();
+        } catch (\GuzzleHttp\Exception\RequestException $e) {
+            echo "Request failed: " . $e->getMessage();
+            if ($e->hasResponse()) {
+                echo "\nResponse: " . $e->getResponse()->getBody();
+            }
+        }
+    }
+
+    // Delete the file after sending        
     If (unlink($archivo)) {
             echo " Archivo borrado";
            } else {

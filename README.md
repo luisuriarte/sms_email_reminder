@@ -15,8 +15,9 @@ Eje.: "ical.ics".
 
 Para envio de WhatsApp se usan 2 empresas
 
- - https://ultramsg.com/ (En Octubre/2023, el valor mensual es de U$S 39 por instancia, envios ilimitados).
- - https://waapi.app (En febrero 2024 arranca desde U$S 6.5 por instancia con envios ilimitados).
+ - https://ultramsg.com/ (En Octubre/2023, el valor mensual es de U$S 39.00 por instancia, envios ilimitados).
+ - https://waapi.app (En febrero 2024 arranca desde U$S 6.50/mo por instancia con envios ilimitados) // No funciona desde Mayo/2025.
+ - https://wasenderapi.com (En Julio 2025 arranca desde U$S 6.00/mo por instancia sin limites de mensajes)
 
 Para que funcione bien en la tabla automatic_notification se debe
 editar el campo type, en conjunto (entradas) debe quedar 'SMS','Email','WSP'.
@@ -41,7 +42,7 @@ y '***USER_PREFFIX***'
 de los campos de los Centros, el telefono debe estar en formato Normal, sin el cero ni el quince Ejemplo:
 1109876543. Los centros se establecen en Administración/Cínica/Centros.
 
-Los datos de Nombre del Centro, Teléfono, EMail, APIKey, Instancias, url (Completa con https://), Servicio (UltraMSG o WaApi),
+Los datos de Nombre del Centro, Teléfono, EMail, APIKey, Instancias, url (Completa con https://), Servicio (UltraMSG, WaApi o WaSenderAPI),
 logo Wsp y Logo email e deben colocar en los Centros, en campos no utilizados:
 
 - Phone -> Whatsapp (Formato estandar, sin +549, sin 0 ni 15 y sin espacios ni guiones: ej. 1148654201)
@@ -52,5 +53,5 @@ logo Wsp y Logo email e deben colocar en los Centros, en campos no utilizados:
 - Attn -> Logo Email
 - Domain_Identifier -> Logo WhatsApp
 - Facility_Npi -> Instancia
-- Facility_Code -> Empresa (WaApi o UltraMSG)
+- Facility_Code -> Empresa (WaApi, UltraMSG o WaSenderAPI)
 - Oid -> Clave API
