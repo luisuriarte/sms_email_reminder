@@ -68,41 +68,77 @@ if (!function_exists('my_print_r')) {
 // Function:    cron_SendWSP
 // Purpose: send WhatsApp
 ////////////////////////////////////////////////////////////////////
-function cron_SendWSP($patient_phone, $vBody, $start_date, $end_date, $patient_name, $patient_email, $facility_name, 
-                    $facility_address, $facility_phone, $facility_email, $provider, $facility_url, $facility_vendor,
-                    $facility_instance, $facility_logo, $facility_api)
-{
 
+// Incluir Guzzle una sola vez al inicio del archivo
+
+require_once '../../vendor/autoload.php';
+
+use GuzzleHttp\Client;
+
+// Definir dateToCal solo si no existe
+if (!function_exists('dateToCal')) {
+    function dateToCal($timestamp) {
+        return gmdate('Ymd\THis\Z', strtotime($timestamp));
+    }
+}
+
+function cron_SendWSP(
+    $patient_phone, $vBody, $start_date, $end_date, $patient_name, $patient_email, $facility_name,
+    $facility_address, $facility_phone, $facility_email, $provider, $facility_url, $facility_vendor,
+    $facility_instance, $facility_logo, $facility_api
+) {
+    // Inicializar log para depuración
+    $log = [];
+    $log[] = "Iniciando cron_SendWSP: " . date('Y-m-d H:i:s');
+
+    // Validar parámetros obligatorios
+    if (empty($patient_phone) || empty($vBody) || empty($start_date) || empty($end_date) ||
+        empty($facility_name) || empty($facility_url) || empty($facility_vendor) ||
+        empty($facility_instance) || empty($facility_api)) {
+        $log[] = "Error: Faltan parámetros obligatorios.";
+        file_put_contents('cron_sendwsp.log', implode("\n", $log) . "\n", FILE_APPEND);
+        return implode("\n", $log);
+    }
+
+    // Validar formato del número de teléfono (10 dígitos)
+    if (!preg_match('/^\d{10}$/', $patient_phone)) {
+        $log[] = "Error: El número de teléfono '$patient_phone' no tiene un formato válido.";
+        file_put_contents('cron_sendwsp.log', implode("\n", $log) . "\n", FILE_APPEND);
+        return implode("\n", $log);
+    }
+
+    // Inicializar variables
     $Instance = $facility_instance;
     $ApiKey = $facility_api;
-	$url_base = $facility_url . "/modules/sms_email_reminder/";
-	$url_logo_wsp = $url_base . $facility_logo;
+    $url_base = rtrim($facility_url, '/') . "/modules/sms_email_reminder/";
+    $url_logo_wsp = $url_base . $facility_logo;
     $todaystamp = gmdate("Ymd\THis\Z");
-    $zone = $GLOBALS['gbl_time_zone'];
-    //$zone = "America/Argentina/Buenos_Aires";
+    $zone = !empty($GLOBALS['gbl_time_zone']) ? $GLOBALS['gbl_time_zone'] : "America/Argentina/Buenos_Aires";
 
-    //Create unique identifier
-    $cal_uid = date('Ymd').'T'.date('His')."-".rand().substr($facility_url, 8);
+    $log[] = "Configuración: vendor=$facility_vendor, instance=$Instance, url_base=$url_base, logo=$url_logo_wsp";
 
-    //Create ICAL Content (Google rfc 2445 for details and examples of usage)
-    $ical_content = 'BEGIN:VCALENDAR
+    // Crear identificador único
+    $cal_uid = date('Ymd') . 'T' . date('His') . "-" . rand() . substr($facility_url, 8);
+
+    // Crear contenido ICAL
+    $ical_content = "BEGIN:VCALENDAR
 METHOD:REQUEST
 PRODID:-//Microsoft Corporation//Outlook 11.0 MIMEDIR//EN
 VERSION:2.0
 BEGIN:VEVENT
-DTSTART;TZID=' . $zone . ':' . dateToCal($start_date) . '
-DTEND;TZID=' . $zone . ':' . dateToCal($end_date) . '
-LOCATION:' . $facility_address . '
+DTSTART;TZID=$zone:" . dateToCal($start_date) . "
+DTEND;TZID=$zone:" . dateToCal($end_date) . "
+LOCATION:$facility_address
 TRANSP:OPAQUE
 SEQUENCE:0
-UID:' . $cal_uid . '
-ORGANIZER;CN=' . $facility_name . ':mailto:' . $facility_email . '
-ATTENDEE;PARTSTAT=ACCEPTED;CN=' . $patient_name . ';EMAIL=' . $patient_email . ':mailto:' . $patient_email . '
-CONTACT:' . $facility_name . '\, ' . $facility_phone . '\,' . $facility_email . '
-DTSTAMP:' . $todaystamp . '
-SUMMARY:Turno en ' . $facility_name . '
-DESCRIPTION:' . $vBody . '
-URL;VALUE=URI:' . $facility_url . '
+UID:$cal_uid
+ORGANIZER;CN=$facility_name:mailto:$facility_email
+ATTENDEE;PARTSTAT=ACCEPTED;CN=$patient_name;EMAIL=$patient_email:mailto:$patient_email
+CONTACT:$facility_name\\, $facility_phone\\,$facility_email
+DTSTAMP:$todaystamp
+SUMMARY:Turno en $facility_name
+DESCRIPTION:$vBody
+URL;VALUE=URI:$facility_url
 PRIORITY:5
 CLASS:PUBLIC
 BEGIN:VALARM
@@ -112,214 +148,217 @@ DURATION:PT30M
 ACTION:DISPLAY
 END:VALARM
 END:VEVENT
-END:VCALENDAR';
-$archivo = "TURNO-" . substr(md5(time()), 0, 8) . ".ics";
-$file_handle = fopen($archivo, 'w+');
-fwrite($file_handle, $ical_content);
+END:VCALENDAR";
 
+    // Crear archivo .ics
+    $archivo = "TURNO-" . substr(md5(time()), 0, 8) . ".ics";
+    $file_handle = @fopen($archivo, 'w+');
+    if (!$file_handle) {
+        $log[] = "Error: No se pudo crear el archivo .ics en el directorio actual.";
+        file_put_contents('cron_sendwsp.log', implode("\n", $log) . "\n", FILE_APPEND);
+        return implode("\n", $log);
+    }
+    fwrite($file_handle, $ical_content);
+    fclose($file_handle);
+    $log[] = "Archivo .ics creado: $archivo";
+
+    // Verificar accesibilidad del logo y el archivo .ics
+    $log[] = "Verificando URL del logo: $url_logo_wsp";
+    $log[] = "Verificando URL del archivo .ics: $url_base$archivo";
+
+    // Procesar según el proveedor
     if (strtolower($facility_vendor) == "waapi") {
         $ChatId = "549" . $patient_phone . "@c.us";
-        // Para waapi.app Primero envio Imagen con Texto
+        $log[] = "WaApi: Enviando a $ChatId";
+        $client = new Client();
+
+        // Enviar imagen con texto
         $body_json = json_encode([
-        "chatId" => $ChatId,
-        "mediaUrl" => $url_logo_wsp,
-        "mediaCaption" => $vBody
+            "chatId" => $ChatId,
+            "mediaUrl" => $url_logo_wsp,
+            "mediaCaption" => $vBody
         ]);
 
-        require_once('../../vendor/autoload.php');
+        try {
+            $response = $client->request('POST', "https://waapi.app/api/v1/instances/$Instance/client/action/send-media", [
+                'body' => $body_json,
+                'headers' => [
+                    'accept' => 'application/json',
+                    'content-type' => 'application/json',
+                    'authorization' => "Bearer $ApiKey",
+                ],
+            ]);
+            $log[] = "WaApi (imagen): " . $response->getBody();
+        } catch (\Exception $e) {
+            $log[] = "Error en WaApi (imagen): " . $e->getMessage();
+            if ($e->hasResponse()) {
+                $log[] = "Respuesta: " . $e->getResponse()->getBody();
+            }
+        }
 
-        $client = new \GuzzleHttp\Client();
-
-        $response = $client->request(
-        'POST',
-        'https://waapi.app/api/v1/instances/' . $Instance . '/client/action/send-media',
-        [
-            'body' => $body_json,
-            'headers' => [
-            'accept' => 'application/json',
-            'content-type' => 'application/json',
-            'authorization' => 'Bearer ' .$ApiKey,
-            ],
-        ]
-        );
-
-        echo $response->getBody();
-        
-        //Para waapi.app Luego envio archivo icalendar con texto de "Presione...."
+        // Enviar archivo iCalendar
         $body_json = json_encode([
             "chatId" => $ChatId,
             "mediaUrl" => $url_base . $archivo,
             "mediaName" => "TURNO.ics",
-            "mediaCaption" => $facility_name . ': Presione en el adjunto para verificar su turno. Gracias.'
-            ]);
-    
-            // require_once('../../vendor/autoload.php');
-    
-            $client = new \GuzzleHttp\Client();
-    
-            $response = $client->request(
-            'POST',
-            'https://waapi.app/api/v1/instances/' . $Instance . '/client/action/send-media',
-            [
+            "mediaCaption" => "$facility_name: Presione en el adjunto para verificar su turno. Gracias."
+        ]);
+
+        try {
+            $response = $client->request('POST', "https://waapi.app/api/v1/instances/$Instance/client/action/send-media", [
                 'body' => $body_json,
                 'headers' => [
-                'accept' => 'application/json',
-                'content-type' => 'application/json',
-                'authorization' => 'Bearer ' .$ApiKey,
+                    'accept' => 'application/json',
+                    'content-type' => 'application/json',
+                    'authorization' => "Bearer $ApiKey",
                 ],
-            ]
-            );
-    
-        echo $response->getBody();
-        
-    }    
-    
-    if (strtolower($facility_vendor) == "ultramsg") {
-        // Para UltraMSG Primero envio Imagen con Texto
+            ]);
+            $log[] = "WaApi (iCalendar): " . $response->getBody();
+        } catch (\Exception $e) {
+            $log[] = "Error en WaApi (iCalendar): " . $e->getMessage();
+            if ($e->hasResponse()) {
+                $log[] = "Respuesta: " . $e->getResponse()->getBody();
+            }
+        }
+    } elseif (strtolower($facility_vendor) == "ultramsg") {
         $wsp = "+549" . $patient_phone;
-        $params=array(
+        $log[] = "UltraMsg: Enviando a $wsp";
+
+        // Enviar imagen con texto
+        $params = [
             'token' => $ApiKey,
             'to' => $wsp,
             'image' => $url_logo_wsp,
             'caption' => $vBody
-            );
-            $curl = curl_init();
-            curl_setopt_array($curl, array(
-              CURLOPT_URL => "https://api.ultramsg.com/{$Instance}/messages/image",
-              CURLOPT_RETURNTRANSFER => true,
-              CURLOPT_ENCODING => "",
-              CURLOPT_MAXREDIRS => 10,
-              CURLOPT_TIMEOUT => 30,
-              CURLOPT_SSL_VERIFYHOST => 0,
-              CURLOPT_SSL_VERIFYPEER => 0,
-              CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-              CURLOPT_CUSTOMREQUEST => "POST",
-              CURLOPT_POSTFIELDS => http_build_query($params),
-              CURLOPT_HTTPHEADER => array(
-                "content-type: application/x-www-form-urlencoded"
-              ),
-            ));
-            
-            $response = curl_exec($curl);
-            $err = curl_error($curl);
-            
-            curl_close($curl);
-            
-            if ($err) {
-              echo "cURL Error #:" . $err;
-            } else {
-              echo $response;
-            }
-    
-            // Para UltraMSG Luego envio archivo icalendar con texto: "Presione adjunto..."
-         $params = array(
+        ];
+        $curl = curl_init();
+        curl_setopt_array($curl, [
+            CURLOPT_URL => "https://api.ultramsg.com/$Instance/messages/image",
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => "",
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_SSL_VERIFYHOST => 0,
+            CURLOPT_SSL_VERIFYPEER => 0,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => "POST",
+            CURLOPT_POSTFIELDS => http_build_query($params),
+            CURLOPT_HTTPHEADER => ["content-type: application/x-www-form-urlencoded"],
+        ]);
+
+        $response = curl_exec($curl);
+        $err = curl_error($curl);
+        curl_close($curl);
+
+        if ($err) {
+            $log[] = "cURL Error (UltraMsg, imagen): $err";
+        } else {
+            $log[] = "UltraMsg (imagen): $response";
+        }
+
+        // Enviar archivo iCalendar
+        $params = [
             'token' => $ApiKey,
             'to' => $wsp,
             'filename' => 'TURNO.ics',
             'document' => $url_base . $archivo,
-            'caption' => $facility_name . ': Presione en el adjunto para verificar su turno. Gracias.'
-        );
-            
+            'caption' => "$facility_name: Presione en el adjunto para verificar su turno. Gracias."
+        ];
         $curl = curl_init();
-            curl_setopt_array($curl, array(
-              CURLOPT_URL => "https://api.ultramsg.com/{$Instance}/messages/document",
-              CURLOPT_RETURNTRANSFER => true,
-              CURLOPT_ENCODING => "",
-              CURLOPT_MAXREDIRS => 10,
-              CURLOPT_TIMEOUT => 30,
-              CURLOPT_SSL_VERIFYHOST => 0,
-              CURLOPT_SSL_VERIFYPEER => 0,
-              CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-              CURLOPT_CUSTOMREQUEST => "POST",
-              CURLOPT_POSTFIELDS => http_build_query($params),
-              CURLOPT_HTTPHEADER => array(
-                "content-type: application/x-www-form-urlencoded"
-              ),
-            ));
-            
-            $response = curl_exec($curl);
-            $err = curl_error($curl);
-            
-            curl_close($curl);
-            
-            if ($err) {
-              echo "cURL Error #:" . $err;
-            } else {
-              echo $response;
-            }
-    }
+        curl_setopt_array($curl, [
+            CURLOPT_URL => "https://api.ultramsg.com/$Instance/messages/document",
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => "",
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_SSL_VERIFYHOST => 0,
+            CURLOPT_SSL_VERIFYPEER => 0,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => "POST",
+            CURLOPT_POSTFIELDS => http_build_query($params),
+            CURLOPT_HTTPHEADER => ["content-type: application/x-www-form-urlencoded"],
+        ]);
 
-    if (strtolower($facility_vendor) == "WaSenderAPI") {
-        // Para WaSenderAPI Primero envio Imagen con Texto
+        $response = curl_exec($curl);
+        $err = curl_error($curl);
+        curl_close($curl);
+
+        if ($err) {
+            $log[] = "cURL Error (UltraMsg, iCalendar): $err";
+        } else {
+            $log[] = "UltraMsg (iCalendar): $response";
+        }
+    } elseif (strtolower($facility_vendor) == "wasenderapi") {
         $ChatId = "+549" . $patient_phone;
-
-        require 'vendor/autoload.php'; // Assuming Guzzle is installed
-
-        use GuzzleHttp\Client;
-
+        $log[] = "WaSenderAPI: Enviando a $ChatId";
         $client = new Client();
-        $apiKey = $ApiKey;
         $url = 'https://www.wasenderapi.com/api/send-message';
 
+        // Enviar imagen con texto
         try {
             $response = $client->post($url, [
                 'headers' => [
-                    'Authorization' => 'Bearer ' . $apiKey,
+                    'Authorization' => "Bearer $ApiKey",
                     'Content-Type' => 'application/json',
                     'Accept' => 'application/json',
                 ],
-                'json' =>             [
+                'json' => [
                     'to' => $ChatId,
-                    'text' => $vBody
+                    'text' => $vBody,
                     'imageUrl' => $url_logo_wsp,
-                    ]
+                ]
             ]);
-
-            echo $response->getBody();
+            $log[] = "WaSenderAPI (imagen): " . $response->getBody();
         } catch (\GuzzleHttp\Exception\RequestException $e) {
-            echo "Request failed: " . $e->getMessage();
+            $log[] = "Error en WaSenderAPI (imagen): " . $e->getMessage();
             if ($e->hasResponse()) {
-                echo "\nResponse: " . $e->getResponse()->getBody();
+                $log[] = "Respuesta: " . $e->getResponse()->getBody();
             }
         }
-
-        // Para WaSenderAPI Luego envio archivo icalendar con texto: "Presione adjunto..."
-        use GuzzleHttp\Client;
-
-        $client = new Client();
-        $apiKey = $ApiKey;
-        $url = 'https://www.wasenderapi.com/api/send-message';
-
+        // Retraso de 60 segundos para la versión de prueba de WaSenderAPI
+        $log[] = "WaSenderAPI: Esperando 65 segundos antes de enviar el archivo .ics (restricción de la versión de prueba)";
+        sleep(65);
+        // Enviar archivo iCalendar
         try {
             $response = $client->post($url, [
                 'headers' => [
-                    'Authorization' => 'Bearer ' . $apiKey,
+                    'Authorization' => "Bearer $ApiKey",
                     'Content-Type' => 'application/json',
                     'Accept' => 'application/json',
                 ],
-                'json' =>             [
+                'json' => [
                     'to' => $ChatId,
-                    'text' => $facility_name . ': Presione en el adjunto para verificar su turno. Gracias.',
+                    'text' => "$facility_name: Presione en el adjunto para verificar su turno. Gracias.",
                     'documentUrl' => $url_base . $archivo,
-                    ]
+                ]
             ]);
-
-            echo $response->getBody();
+            $log[] = "WaSenderAPI (iCalendar): " . $response->getBody();
         } catch (\GuzzleHttp\Exception\RequestException $e) {
-            echo "Request failed: " . $e->getMessage();
+            $log[] = "Error en WaSenderAPI (iCalendar): " . $e->getMessage();
             if ($e->hasResponse()) {
-                echo "\nResponse: " . $e->getResponse()->getBody();
+                $log[] = "Respuesta: " . $e->getResponse()->getBody();
             }
         }
+    } else {
+        $log[] = "Error: Proveedor '$facility_vendor' no reconocido.";
     }
 
-    // Delete the file after sending        
-    If (unlink($archivo)) {
-            echo " Archivo borrado";
-           } else {
-            echo " Problema al borrar archivo"; 
-        }    
+    // Retraso de 5 segundos para la versión de prueba de WaSenderAPI
+    $log[] = "WaSenderAPI: Retrazo 5 segundos antes de enviar el archivo .ics";
+    sleep(5);
 
+    // Eliminar el archivo .ics
+    if (file_exists($archivo) && unlink($archivo)) {
+        $log[] = "Archivo .ics borrado correctamente.";
+    } else {
+        $log[] = "Problema al borrar el archivo .ics.";
+    }
+
+    // Guardar log en archivo
+    file_put_contents('cron_sendwsp.log', implode("\n", $log) . "\n", FILE_APPEND);
+
+    // Retornar log para depuración
+    return implode("\n", $log);
 }
 
 ////////////////////////////////////////////////////////////////////
