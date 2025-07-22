@@ -74,13 +74,7 @@ if (!function_exists('my_print_r')) {
 require_once '../../vendor/autoload.php';
 
 use GuzzleHttp\Client;
-
-// Definir dateToCal solo si no existe
-if (!function_exists('dateToCal')) {
-    function dateToCal($timestamp) {
-        return gmdate('Ymd\THis\Z', strtotime($timestamp));
-    }
-}
+use GuzzleHttp\Exception\RequestException;
 
 function cron_SendWSP(
     $patient_phone, $vBody, $start_date, $end_date, $patient_name, $patient_email, $facility_name,
@@ -90,21 +84,24 @@ function cron_SendWSP(
     // Inicializar log para depuración
     $log = [];
     $log[] = "Iniciando cron_SendWSP: " . date('Y-m-d H:i:s');
+    $result = ['status' => 'error', 'msgId' => null, 'log' => ''];
 
     // Validar parámetros obligatorios
     if (empty($patient_phone) || empty($vBody) || empty($start_date) || empty($end_date) ||
         empty($facility_name) || empty($facility_url) || empty($facility_vendor) ||
         empty($facility_instance) || empty($facility_api)) {
         $log[] = "Error: Faltan parámetros obligatorios.";
+        $result['log'] = implode("\n", $log);
         file_put_contents('cron_sendwsp.log', implode("\n", $log) . "\n", FILE_APPEND);
-        return implode("\n", $log);
+        return $result;
     }
 
     // Validar formato del número de teléfono (10 dígitos)
     if (!preg_match('/^\d{10}$/', $patient_phone)) {
         $log[] = "Error: El número de teléfono '$patient_phone' no tiene un formato válido.";
+        $result['log'] = implode("\n", $log);
         file_put_contents('cron_sendwsp.log', implode("\n", $log) . "\n", FILE_APPEND);
-        return implode("\n", $log);
+        return $result;
     }
 
     // Inicializar variables
@@ -155,140 +152,35 @@ END:VCALENDAR";
     $file_handle = @fopen($archivo, 'w+');
     if (!$file_handle) {
         $log[] = "Error: No se pudo crear el archivo .ics en el directorio actual.";
+        $result['log'] = implode("\n", $log);
         file_put_contents('cron_sendwsp.log', implode("\n", $log) . "\n", FILE_APPEND);
-        return implode("\n", $log);
+        return $result;
     }
     fwrite($file_handle, $ical_content);
     fclose($file_handle);
     $log[] = "Archivo .ics creado: $archivo";
 
-    // Verificar accesibilidad del logo y el archivo .ics
-    $log[] = "Verificando URL del logo: $url_logo_wsp";
-    $log[] = "Verificando URL del archivo .ics: $url_base$archivo";
+    // Verificar si el archivo .ics existe y es legible
+    if (!file_exists($archivo) || !is_readable($archivo)) {
+        $log[] = "Error: El archivo .ics ($archivo) no existe o no es legible.";
+        $result['log'] = implode("\n", $log);
+        file_put_contents('cron_sendwsp.log', implode("\n", $log) . "\n", FILE_APPEND);
+        return $result;
+    }
+
+    // Verificar accesibilidad de las URLs
+    $url_ics = $url_base . $archivo;
+    $log[] = "URL del logo: $url_logo_wsp";
+    $log[] = "URL del archivo .ics: $url_ics";
+
+    // Probar accesibilidad de las URLs
+    $headers_logo = @get_headers($url_logo_wsp);
+    $headers_ics = @get_headers($url_ics);
+    $log[] = "Accesibilidad logo: " . ($headers_logo ? $headers_logo[0] : "No se pudo verificar");
+    $log[] = "Accesibilidad .ics: " . ($headers_ics ? $headers_ics[0] : "No se pudo verificar");
 
     // Procesar según el proveedor
-    if (strtolower($facility_vendor) == "waapi") {
-        $ChatId = "549" . $patient_phone . "@c.us";
-        $log[] = "WaApi: Enviando a $ChatId";
-        $client = new Client();
-
-        // Enviar imagen con texto
-        $body_json = json_encode([
-            "chatId" => $ChatId,
-            "mediaUrl" => $url_logo_wsp,
-            "mediaCaption" => $vBody
-        ]);
-
-        try {
-            $response = $client->request('POST', "https://waapi.app/api/v1/instances/$Instance/client/action/send-media", [
-                'body' => $body_json,
-                'headers' => [
-                    'accept' => 'application/json',
-                    'content-type' => 'application/json',
-                    'authorization' => "Bearer $ApiKey",
-                ],
-            ]);
-            $log[] = "WaApi (imagen): " . $response->getBody();
-        } catch (\Exception $e) {
-            $log[] = "Error en WaApi (imagen): " . $e->getMessage();
-            if ($e->hasResponse()) {
-                $log[] = "Respuesta: " . $e->getResponse()->getBody();
-            }
-        }
-
-        // Enviar archivo iCalendar
-        $body_json = json_encode([
-            "chatId" => $ChatId,
-            "mediaUrl" => $url_base . $archivo,
-            "mediaName" => "TURNO.ics",
-            "mediaCaption" => "$facility_name: Presione en el adjunto para verificar su turno. Gracias."
-        ]);
-
-        try {
-            $response = $client->request('POST', "https://waapi.app/api/v1/instances/$Instance/client/action/send-media", [
-                'body' => $body_json,
-                'headers' => [
-                    'accept' => 'application/json',
-                    'content-type' => 'application/json',
-                    'authorization' => "Bearer $ApiKey",
-                ],
-            ]);
-            $log[] = "WaApi (iCalendar): " . $response->getBody();
-        } catch (\Exception $e) {
-            $log[] = "Error en WaApi (iCalendar): " . $e->getMessage();
-            if ($e->hasResponse()) {
-                $log[] = "Respuesta: " . $e->getResponse()->getBody();
-            }
-        }
-    } elseif (strtolower($facility_vendor) == "ultramsg") {
-        $wsp = "+549" . $patient_phone;
-        $log[] = "UltraMsg: Enviando a $wsp";
-
-        // Enviar imagen con texto
-        $params = [
-            'token' => $ApiKey,
-            'to' => $wsp,
-            'image' => $url_logo_wsp,
-            'caption' => $vBody
-        ];
-        $curl = curl_init();
-        curl_setopt_array($curl, [
-            CURLOPT_URL => "https://api.ultramsg.com/$Instance/messages/image",
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => "",
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 30,
-            CURLOPT_SSL_VERIFYHOST => 0,
-            CURLOPT_SSL_VERIFYPEER => 0,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => "POST",
-            CURLOPT_POSTFIELDS => http_build_query($params),
-            CURLOPT_HTTPHEADER => ["content-type: application/x-www-form-urlencoded"],
-        ]);
-
-        $response = curl_exec($curl);
-        $err = curl_error($curl);
-        curl_close($curl);
-
-        if ($err) {
-            $log[] = "cURL Error (UltraMsg, imagen): $err";
-        } else {
-            $log[] = "UltraMsg (imagen): $response";
-        }
-
-        // Enviar archivo iCalendar
-        $params = [
-            'token' => $ApiKey,
-            'to' => $wsp,
-            'filename' => 'TURNO.ics',
-            'document' => $url_base . $archivo,
-            'caption' => "$facility_name: Presione en el adjunto para verificar su turno. Gracias."
-        ];
-        $curl = curl_init();
-        curl_setopt_array($curl, [
-            CURLOPT_URL => "https://api.ultramsg.com/$Instance/messages/document",
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => "",
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 30,
-            CURLOPT_SSL_VERIFYHOST => 0,
-            CURLOPT_SSL_VERIFYPEER => 0,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => "POST",
-            CURLOPT_POSTFIELDS => http_build_query($params),
-            CURLOPT_HTTPHEADER => ["content-type: application/x-www-form-urlencoded"],
-        ]);
-
-        $response = curl_exec($curl);
-        $err = curl_error($curl);
-        curl_close($curl);
-
-        if ($err) {
-            $log[] = "cURL Error (UltraMsg, iCalendar): $err";
-        } else {
-            $log[] = "UltraMsg (iCalendar): $response";
-        }
-    } elseif (strtolower($facility_vendor) == "wasenderapi") {
+    if (strtolower($facility_vendor) == "wasenderapi") {
         $ChatId = "+549" . $patient_phone;
         $log[] = "WaSenderAPI: Enviando a $ChatId";
         $client = new Client();
@@ -308,17 +200,23 @@ END:VCALENDAR";
                     'imageUrl' => $url_logo_wsp,
                 ]
             ]);
+            $responseBody = json_decode($response->getBody(), true);
             $log[] = "WaSenderAPI (imagen): " . $response->getBody();
-        } catch (\GuzzleHttp\Exception\RequestException $e) {
+        } catch (RequestException $e) {
             $log[] = "Error en WaSenderAPI (imagen): " . $e->getMessage();
             if ($e->hasResponse()) {
                 $log[] = "Respuesta: " . $e->getResponse()->getBody();
             }
+            $result['log'] = implode("\n", $log);
+            file_put_contents('cron_sendwsp.log', implode("\n", $log) . "\n", FILE_APPEND);
+            return $result;
         }
+
         // Retraso de 60 segundos para la versión de prueba de WaSenderAPI
-        $log[] = "WaSenderAPI: Esperando 65 segundos antes de enviar el archivo .ics (restricción de la versión de prueba)";
-        sleep(65);
-        // Enviar archivo iCalendar
+        $log[] = "WaSenderAPI: Esperando 60 segundos antes de enviar el archivo .ics (restricción de la versión de prueba)";
+        sleep(60);
+
+        // Enviar archivo iCalendar con tipo MIME explícito
         try {
             $response = $client->post($url, [
                 'headers' => [
@@ -329,11 +227,17 @@ END:VCALENDAR";
                 'json' => [
                     'to' => $ChatId,
                     'text' => "$facility_name: Presione en el adjunto para verificar su turno. Gracias.",
-                    'documentUrl' => $url_base . $archivo,
+                    'documentUrl' => $url_ics,
+                    'mimeType' => 'text/calendar'
                 ]
             ]);
+            $responseBody = json_decode($response->getBody(), true);
             $log[] = "WaSenderAPI (iCalendar): " . $response->getBody();
-        } catch (\GuzzleHttp\Exception\RequestException $e) {
+            if ($responseBody['success'] && isset($responseBody['data']['msgId'])) {
+                $result['status'] = 'success';
+                $result['msgId'] = $responseBody['data']['msgId'];
+            }
+        } catch (RequestException $e) {
             $log[] = "Error en WaSenderAPI (iCalendar): " . $e->getMessage();
             if ($e->hasResponse()) {
                 $log[] = "Respuesta: " . $e->getResponse()->getBody();
@@ -343,22 +247,20 @@ END:VCALENDAR";
         $log[] = "Error: Proveedor '$facility_vendor' no reconocido.";
     }
 
-    // Retraso de 5 segundos para la versión de prueba de WaSenderAPI
-    $log[] = "WaSenderAPI: Retrazo 5 segundos antes de enviar el archivo .ics";
+    // Retrasar eliminación del archivo .ics
     sleep(5);
-
-    // Eliminar el archivo .ics
     if (file_exists($archivo) && unlink($archivo)) {
         $log[] = "Archivo .ics borrado correctamente.";
     } else {
         $log[] = "Problema al borrar el archivo .ics.";
     }
-
+    
     // Guardar log en archivo
+    $result['log'] = implode("\n", $log);
     file_put_contents('cron_sendwsp.log', implode("\n", $log) . "\n", FILE_APPEND);
 
-    // Retornar log para depuración
-    return implode("\n", $log);
+    // Retornar resultado con msgId
+    return $result;
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -367,18 +269,14 @@ END:VCALENDAR";
 ////////////////////////////////////////////////////////////////////
 function cron_updateentry($type, $pid, $pc_eid)
 {
-    $query = "UPDATE openemr_postcalendar_events SET ";
-    
     if ($type == 'WSP') {
-        $query .= " openemr_postcalendar_events.pc_sendalertsms='YES' ,  openemr_postcalendar_events.pc_apptstatus='WSP' ";
+        $sql = "UPDATE openemr_postcalendar_events SET pc_sendalertsms = 'YES' WHERE pc_pid = ? AND pc_eid = ?";
+        sqlStatement($sql, array($pid, $pc_eid));
     } else {
-        $query .= " openemr_postcalendar_events.pc_sendalertemail='YES' ,  openemr_postcalendar_events.pc_apptstatus='EMAIL' ";
+        $sql = "UPDATE openemr_postcalendar_events SET pc_sendalertemail = 'YES' WHERE pc_pid = ? AND pc_eid = ?";
+        sqlStatement($sql, array($pid, $pc_eid));
     }
-    $query .= " WHERE openemr_postcalendar_events.pc_pid=? 
-                AND openemr_postcalendar_events.pc_eid=? ";
-    $db_sql = (sqlStatement($query, [$pid, $pc_eid]));
 }
-
 ////////////////////////////////////////////////////////////////////
 // Function:    cron_getAlertpatientData
 // Purpose: get patient data for send to alert
@@ -389,13 +287,17 @@ function cron_getAlertpatientData($type)
    
     if ($type == 'WSP') {
         $ssql = " AND pd.hipaa_allowsms='YES' AND pd.phone_cell<>'' AND ope.pc_sendalertsms='NO' ";
-        $check_date = date("Y-m-d", mktime(date("h") + $SMS_NOTIFICATION_HOUR, 0, 0, date("m"), date("d"), date("Y")));
+        // Buscar citas en los próximos 3 días
+        $start_date = date("Y-m-d");
+        $end_date = date("Y-m-d", strtotime("+3 days"));
+        $ssql .= " AND ope.pc_eventDate BETWEEN '$start_date' AND '$end_date'";
     } else {
-        $ssql = " AND pd.hipaa_allowemail='YES' AND pd.email <> ''  AND ope.pc_sendalertemail='NO' ";
-        $check_date = date("Y-m-d", mktime(date("h") + $EMAIL_NOTIFICATION_HOUR, 0, 0, date("m"), date("d"), date("Y")));
+        $ssql = " AND pd.hipaa_allowemail='YES' AND pd.email <> '' AND ope.pc_sendalertemail='NO' ";
+        $start_date = date("Y-m-d");
+        $end_date = date("Y-m-d", strtotime("+3 days"));
+        $ssql .= " AND ope.pc_eventDate BETWEEN '$start_date' AND '$end_date'";
     }
     $patient_field = "pd.pid,pd.title,pd.fname,pd.lname,pd.mname,pd.phone_cell,pd.email,pd.email_direct,pd.hipaa_allowsms,pd.hipaa_allowemail,";
-    $ssql .= " AND (ope.pc_eventDate='" . add_escape_custom($check_date) . "')";
     $query = "SELECT $patient_field ope.pc_eid, ope.pc_pid, ope.pc_title,
                     ope.pc_hometext, ope.pc_eventDate, ope.pc_endDate,
                     ope.pc_duration, ope.pc_alldayevent, ope.pc_startTime, ope.pc_endTime,
@@ -416,7 +318,7 @@ function cron_getAlertpatientData($type)
             WHERE ope.pc_pid = pd.pid $ssql
             ORDER BY ope.pc_eventDate, ope.pc_startTime";
 	
-    $db_patient = (sqlStatement($query));
+    $db_patient = sqlStatement($query);
     $patient_array = array();
     $cnt = 0;
     while ($prow = sqlFetchArray($db_patient)) {
@@ -426,53 +328,54 @@ function cron_getAlertpatientData($type)
     return $patient_array;
 }
 
+
 ////////////////////////////////////////////////////////////////////
 // Function:    cron_getNotificationData
 // Purpose: get alert notification data
 ////////////////////////////////////////////////////////////////////
 function cron_getNotificationData($type)
 {
-    $query = "SELECT * FROM automatic_notification WHERE type=? ";
-    $db_email_msg = sqlFetchArray(sqlStatement($query, [$type]));
-    return $db_email_msg;
+    $sql = "SELECT * FROM automatic_notification WHERE type = ? ";
+    $res = sqlQuery($sql, array($type));
+    return $res;
 }
 
 ////////////////////////////////////////////////////////////////////
 // Function:    cron_InsertNotificationLogEntry
 // Purpose: insert log entry in table
 ////////////////////////////////////////////////////////////////////
-function cron_InsertNotificationLogEntry($type, $prow, $db_email_msg)
-{
-    global $SMS_GATEWAY_USENAME, $SMS_GATEWAY_PASSWORD, $SMS_GATEWAY_APIKEY;
+// Función modificada para incluir msg_id
+function cron_InsertNotificationLogEntry($type, $prow, $db_email_msg, $msg_id = null, $status = null) {
     if ($type == 'WSP') {
-        $smsgateway_info = $db_email_msg['sms_gateway_type'] . "|||" . $SMS_GATEWAY_USENAME . "|||" . $SMS_GATEWAY_PASSWORD . "|||" . $SMS_GATEWAY_APIKEY;
+        $smsgateway_info = $db_email_msg['sms_gateway_type'];
     } else {
         $smsgateway_info = $db_email_msg['email_sender'] . "|||" . $db_email_msg['email_subject'];
     }
     $patient_info = $prow['title'] . " " . $prow['fname'] . " " . $prow['mname'] . " " . $prow['lname'] . "|||" . $prow['phone_cell'] . "|||" . $prow['email'];
     $data_info = $prow['pc_eventDate'] . "|||" . $prow['pc_endDate'] . "|||" . $prow['pc_startTime'] . "|||" . $prow['pc_endTime'];
-    $sql_loginsert = "INSERT INTO `notification_log` ( `iLogId` , `pid` , `pc_eid` , `sms_gateway_type` , `message` , `email_sender` , `email_subject` , `type` , `patient_info` , `smsgateway_info` , `pc_eventDate` , `pc_endDate` , `pc_startTime` , `pc_endTime` , `dSentDateTime` ) VALUES ";
-    $sql_loginsert .= "(NULL , ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    $sql_loginsert = "INSERT INTO `notification_log` ( `iLogId` , `pid` , `pc_eid` , `sms_gateway_type` , `message` , `email_sender` , `email_subject` , `type` , `patient_info` , `smsgateway_info` , `msg_id` , `status` , `pc_eventDate` , `pc_endDate` , `pc_startTime` , `pc_endTime` , `dSentDateTime` ) VALUES ";
+    $sql_loginsert .= "(NULL , ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-    $db_loginsert = (sqlStatement(
-            $sql_loginsert,
-            [
-                $prow['pid'],
-                $prow['pc_eid'],
-                $db_email_msg['sms_gateway_type'],
-                $db_email_msg['message'],
-                $db_email_msg['email_sender'],
-                $db_email_msg['email_subject'],
-                $db_email_msg['type'],
-                $patient_info,
-                $smsgateway_info,
-                $prow['pc_eventDate'],
-                $prow['pc_endDate'],
-                $prow['pc_startTime'],
-                $prow['pc_endTime'],
-                date("Y-m-d H:i:s")
-            ]
-        )
+    sqlStatement(
+        $sql_loginsert,
+        [
+            $prow['pid'],
+            $prow['pc_eid'],
+            $db_email_msg['sms_gateway_type'],
+            $db_email_msg['message'],
+            $db_email_msg['email_sender'],
+            $db_email_msg['email_subject'],
+            $db_email_msg['type'],
+            $patient_info,
+            $smsgateway_info,
+            $msg_id,
+            $status,
+            $prow['pc_eventDate'],
+            $prow['pc_endDate'],
+            $prow['pc_startTime'],
+            $prow['pc_endTime'],
+            date("Y-m-d H:i:s")
+        ]
     );
 }
 
@@ -509,8 +412,7 @@ function cron_setmessage($prow, $db_email_msg)
 ////////////////////////////////////////////////////////////////////
 function cron_GetNotificationSettings()
 {
-    $strQuery = "SELECT * FROM notification_settings WHERE type='SMS/Email Settings'";
-    $vectNotificationSettings = sqlFetchArray(sqlStatement($strQuery));
-
-    return( $vectNotificationSettings );
+    $sql = "SELECT * FROM notification_settings WHERE type = 'SMS/Email Settings'";
+    $res = sqlQuery($sql);
+    return $res;
 }
