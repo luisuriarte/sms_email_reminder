@@ -96,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <form method="post" class="mb-4">
                     <div class="mb-3">
-                        <label for="phoneNumber" class="form-label">Número de teléfono (sin +549):</label>
+                        <label for="phoneNumber" class="form-label">Número de teléfono (sin +549 y sin 15):</label>
                         <input type="text" name="phoneNumber" id="phoneNumber" class="form-control" value="<?php echo htmlspecialchars($phoneNumber); ?>" placeholder="3404540440" pattern="\d{10}" required>
                     </div>
                     <div class="text-center">
