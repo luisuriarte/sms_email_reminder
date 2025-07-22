@@ -1,11 +1,5 @@
 <?php
-require_once(__DIR__ . "/../../interface/globals.php");
-require_once(__DIR__ . "/../../library/appointments.inc.php");
-require_once(__DIR__ . "/../../library/patient_tracker.inc.php");
-require_once(__DIR__ . "/../../vendor/autoload.php");
-
-// Definir el Webhook Secret
-define('WEBHOOK_SECRET', 'cc9df657d45d12d01838fd1c146052bd');
+require_once __DIR__ . '/../../interface/globals.php';
 
 // Ruta absoluta del log
 define('WEBHOOK_LOG', '/var/www/html/origen.ar/hcd/modules/sms_email_reminder/webhook.log');
@@ -32,15 +26,6 @@ if ($content_type !== 'application/json') {
     exit;
 }
 
-// Validar Webhook Secret
-$received_secret = isset($headers['X-Webhook-Signature']) ? $headers['X-Webhook-Signature'] : '';
-file_put_contents(WEBHOOK_LOG, date('Y-m-d H:i:s') . " - X-Webhook-Signature: $received_secret\n", FILE_APPEND);
-if ($received_secret !== WEBHOOK_SECRET) {
-    file_put_contents(WEBHOOK_LOG, date('Y-m-d H:i:s') . " - Error: Webhook Signature no coincide. Recibido: $received_secret\n", FILE_APPEND);
-    http_response_code(401);
-    exit;
-}
-
 // Procesar evento messages.update
 if (isset($webhook_data['event']) && $webhook_data['event'] == 'messages.update') {
     $msg_id = $webhook_data['data']['key']['id'] ?? '';
@@ -51,8 +36,38 @@ if (isset($webhook_data['event']) && $webhook_data['event'] == 'messages.update'
         exit;
     }
     $status = $webhook_data['data']['status'] ?? '';
-    $phone = preg_replace('/[^0-9]/', '', $jid); // Extraer número
+    $phone = preg_replace('/[^0-9]/', '', $jid);
     $phone = substr($phone, -10);
+
+    // Obtener facility_npi (Webhook Secret) basado en el número de teléfono
+    try {
+        $sql = "SELECT f.facility_npi 
+                FROM patient_data pd 
+                JOIN openemr_postcalendar_events ope ON pd.pid = ope.pc_pid 
+                JOIN facility f ON ope.pc_facility = f.id 
+                WHERE pd.phone_cell = ? AND ope.pc_apptstatus = 'WSP' 
+                ORDER BY ope.pc_eventDate DESC LIMIT 1";
+        $facility = sqlQuery($sql, [$phone]);
+        $WEBHOOK_SECRET = $facility['facility_npi'] ?? '';
+        if (empty($WEBHOOK_SECRET)) {
+            file_put_contents(WEBHOOK_LOG, date('Y-m-d H:i:s') . " - Error: No se encontró facility_npi para phone=$phone\n", FILE_APPEND);
+            http_response_code(500);
+            exit;
+        }
+    } catch (Exception $e) {
+        file_put_contents(WEBHOOK_LOG, date('Y-m-d H:i:s') . " - Error al consultar facility: " . $e->getMessage() . "\n", FILE_APPEND);
+        http_response_code(500);
+        exit;
+    }
+
+    // Validar Webhook Secret
+    $received_secret = isset($headers['X-Webhook-Signature']) ? $headers['X-Webhook-Signature'] : '';
+    file_put_contents(WEBHOOK_LOG, date('Y-m-d H:i:s') . " - X-Webhook-Signature: $received_secret\n", FILE_APPEND);
+    if ($received_secret !== $WEBHOOK_SECRET) {
+        file_put_contents(WEBHOOK_LOG, date('Y-m-d H:i:s') . " - Error: Webhook Signature no coincide. Recibido: $received_secret\n", FILE_APPEND);
+        http_response_code(401);
+        exit;
+    }
 
     // Actualizar estado en notification_log
     try {

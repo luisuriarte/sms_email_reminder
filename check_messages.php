@@ -1,15 +1,11 @@
 <?php
 require_once '../../vendor/autoload.php'; // Incluir GuzzleHTTP
-require_once(__DIR__ . "/../../interface/globals.php");
-require_once(__DIR__ . "/../../library/appointments.inc.php");
-require_once(__DIR__ . "/../../library/patient_tracker.inc.php");
+require_once __DIR__ . '/../../interface/globals.php';
+require_once __DIR__ . '/../../library/appointments.inc.php';
+require_once __DIR__ . '/../../library/patient_tracker.inc.php';
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
-
-// Configuración de WaSenderAPI
-$apiKey = 'd492646b0f496fe95981ba074da1e212d1238a58c74fad785971fe2cc39ab80a';
-$baseUrl = 'https://www.wasenderapi.com/api';
 
 // Inicializar variables para el formulario
 $phoneNumber = '';
@@ -28,43 +24,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (empty($errors)) {
-        // Consultar mensajes en la base de datos
-        $sql = "SELECT iLogId, msg_id, message, patient_info, dSentDateTime, status 
-                FROM notification_log 
-                WHERE type = 'WSP' AND patient_info LIKE ? 
-                ORDER BY dSentDateTime DESC";
-        $resultSet = sqlStatement($sql, ["%|||$phoneNumber|||%"]);
-        $messages = [];
-        while ($row = sqlFetchArray($resultSet)) {
-            $messages[] = $row;
+        // Obtener API Key desde la tabla facility basado en el número de teléfono
+        try {
+            $sql = "SELECT f.oid 
+                    FROM patient_data pd 
+                    JOIN openemr_postcalendar_events ope ON pd.pid = ope.pc_pid 
+                    JOIN facility f ON ope.pc_facility = f.id 
+                    WHERE pd.phone_cell = ? AND ope.pc_apptstatus = 'WSP' 
+                    ORDER BY ope.pc_eventDate DESC LIMIT 1";
+            $facility = sqlQuery($sql, [$phoneNumber]);
+            $apiKey = $facility['oid'] ?? '';
+            if (empty($apiKey)) {
+                $errors[] = 'No se encontró la clave API para el número de teléfono proporcionado.';
+            }
+        } catch (Exception $e) {
+            $errors[] = 'Error al consultar la tabla facility: ' . $e->getMessage();
         }
 
-        if (!empty($messages)) {
-            $result = "<h3 class='mb-4'>Mensajes enviados a +549$phoneNumber</h3>";
-            $result .= "<div class='table-responsive'>";
-            $result .= "<table class='table table-striped table-bordered table-hover'>";
-            $result .= "<thead class='table-light'><tr><th>ID del Log</th><th>ID del Mensaje</th><th>Mensaje</th><th>Estado</th><th>Fecha de Envío</th><th>Acción</th></tr></thead>";
-            $result .= "<tbody>";
-            foreach ($messages as $message) {
-                $result .= "<tr>";
-                $result .= "<td>" . htmlspecialchars($message['iLogId']) . "</td>";
-                $result .= "<td>" . htmlspecialchars($message['msg_id'] ?? 'No disponible') . "</td>";
-                $result .= "<td>" . htmlspecialchars($message['message']) . "</td>";
-                $result .= "<td>" . htmlspecialchars($message['status'] ?? 'No disponible') . "</td>";
-                $result .= "<td>" . htmlspecialchars($message['dSentDateTime']) . "</td>";
-                $result .= "<td>";
-                if (!empty($message['msg_id'])) {
-                    $result .= "<form method='post' action='check_status.php' class='d-inline'>";
-                    $result .= "<input type='hidden' name='msgId' value='" . htmlspecialchars($message['msg_id']) . "'>";
-                    $result .= "<button type='submit' class='btn btn-sm btn-primary'>Ver Estado</button>";
-                    $result .= "</form>";
-                }
-                $result .= "</td>";
-                $result .= "</tr>";
+        // Consultar mensajes en la base de datos
+        if (empty($errors)) {
+            $sql = "SELECT iLogId, msg_id, message, patient_info, dSentDateTime, status 
+                    FROM notification_log 
+                    WHERE type = 'WSP' AND patient_info LIKE ? 
+                    ORDER BY dSentDateTime DESC";
+            $resultSet = sqlStatement($sql, ["%|||$phoneNumber|||%"]);
+            $messages = [];
+            while ($row = sqlFetchArray($resultSet)) {
+                $messages[] = $row;
             }
-            $result .= "</tbody></table></div>";
-        } else {
-            $result = "<div class='alert alert-info'>No se encontraron mensajes para +549$phoneNumber.</div>";
+
+            if (!empty($messages)) {
+                $result = "<h3 class='mb-4'>Mensajes enviados a +549$phoneNumber</h3>";
+                $result .= "<div class='table-responsive'>";
+                $result .= "<table class='table table-striped table-bordered table-hover'>";
+                $result .= "<thead class='table-light'><tr><th>ID del Log</th><th>ID del Mensaje</th><th>Mensaje</th><th>Estado</th><th>Fecha de Envío</th><th>Acción</th></tr></thead>";
+                $result .= "<tbody>";
+                foreach ($messages as $message) {
+                    $result .= "<tr>";
+                    $result .= "<td>" . htmlspecialchars($message['iLogId']) . "</td>";
+                    $result .= "<td>" . htmlspecialchars($message['msg_id'] ?? 'No disponible') . "</td>";
+                    $result .= "<td>" . htmlspecialchars($message['message']) . "</td>";
+                    $result .= "<td>" . htmlspecialchars($message['status'] ?? 'No disponible') . "</td>";
+                    $result .= "<td>" . htmlspecialchars($message['dSentDateTime']) . "</td>";
+                    $result .= "<td>";
+                    if (!empty($message['msg_id'])) {
+                        $result .= "<form method='post' action='check_status.php' class='d-inline'>";
+                        $result .= "<input type='hidden' name='msgId' value='" . htmlspecialchars($message['msg_id']) . "'>";
+                        $result .= "<input type='hidden' name='phoneNumber' value='" . htmlspecialchars($phoneNumber) . "'>";
+                        $result .= "<button type='submit' class='btn btn-sm btn-primary'>Ver Estado</button>";
+                        $result .= "</form>";
+                    }
+                    $result .= "</td>";
+                    $result .= "</tr>";
+                }
+                $result .= "</tbody></table></div>";
+            } else {
+                $result = "<div class='alert alert-info'>No se encontraron mensajes para +549$phoneNumber.</div>";
+            }
         }
     }
 }
@@ -84,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="row justify-content-center">
             <div class="col-md-8">
                 <h2 class="mb-4 text-center">Leer Mensajes Enviados - WaSenderAPI</h2>
-                <p class="text-muted text-center">Ingresa el número de teléfono (10 dígitos, ej. 3404540440) para ver los mensajes enviados.</p>
+                <p class="text-muted text-center">Ingresa el número de teléfono (sin +549, sin 15 y sin espacios ni guiones):</p>
 
                 <?php if (!empty($errors)): ?>
                     <div class="alert alert-danger" role="alert">
@@ -96,7 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <form method="post" class="mb-4">
                     <div class="mb-3">
-                        <label for="phoneNumber" class="form-label">Número de teléfono (sin +549, sin 15 y sin espacios ni guiones):</label>
+                        <label for="phoneNumber" class="form-label">Número de teléfono (sin +549):</label>
                         <input type="text" name="phoneNumber" id="phoneNumber" class="form-control" value="<?php echo htmlspecialchars($phoneNumber); ?>" placeholder="3404540440" pattern="\d{10}" required>
                     </div>
                     <div class="text-center">
@@ -113,7 +129,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 
-    <!-- Bootstrap 5 JS (para componentes como tooltips o modales, si se usan en el futuro) -->
+    <!-- Bootstrap 5 JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
 </body>
 </html>

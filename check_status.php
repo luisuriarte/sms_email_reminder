@@ -6,7 +6,6 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 
 // Configuración de WaSenderAPI
-$apiKey = 'd492646b0f496fe95981ba074da1e212d1238a58c74fad785971fe2cc39ab80a';
 $baseUrl = 'https://www.wasenderapi.com/api';
 $logFile = '/var/www/html/origen.ar/hcd/modules/sms_email_reminder/check_status.log';
 
@@ -22,6 +21,7 @@ $statusMap = [
 
 // Inicializar variables
 $msgId = trim($_POST['msgId'] ?? '');
+$phoneNumber = trim($_POST['phoneNumber'] ?? '');
 $result = '';
 $errors = [];
 
@@ -30,8 +30,37 @@ if (empty($msgId)) {
     $errors[] = 'El ID del mensaje es obligatorio.';
     file_put_contents($logFile, date('Y-m-d H:i:s') . " - Error: ID del mensaje vacío\n", FILE_APPEND);
 }
+if (empty($phoneNumber)) {
+    $errors[] = 'El número de teléfono es obligatorio.';
+    file_put_contents($logFile, date('Y-m-d H:i:s') . " - Error: Número de teléfono vacío\n", FILE_APPEND);
+} elseif (!preg_match('/^\d{10}$/', $phoneNumber)) {
+    $errors[] = 'El número de teléfono debe tener 10 dígitos (ej. 3404540440).';
+    file_put_contents($logFile, date('Y-m-d H:i:s') . " - Error: Número de teléfono inválido ($phoneNumber)\n", FILE_APPEND);
+}
 
+// Obtener API Key desde la tabla facility
 if (empty($errors)) {
+    try {
+        $sql = "SELECT f.oid 
+                FROM patient_data pd 
+                JOIN openemr_postcalendar_events ope ON pd.pid = ope.pc_pid 
+                JOIN facility f ON ope.pc_facility = f.id 
+                WHERE pd.phone_cell = ? AND ope.pc_apptstatus = 'WSP' 
+                ORDER BY ope.pc_eventDate DESC LIMIT 1";
+        $facility = sqlQuery($sql, [$phoneNumber]);
+        $apiKey = $facility['oid'] ?? '';
+        if (empty($apiKey)) {
+            $errors[] = 'No se encontró la clave API para el número de teléfono proporcionado.';
+            file_put_contents($logFile, date('Y-m-d H:i:s') . " - Error: No se encontró oid para phone=$phoneNumber\n", FILE_APPEND);
+        }
+    } catch (Exception $e) {
+        $errors[] = 'Error al consultar la tabla facility: ' . $e->getMessage();
+        file_put_contents($logFile, date('Y-m-d H:i:s') . " - Error al consultar facility: " . $e->getMessage() . "\n", FILE_APPEND);
+    }
+}
+
+// Consultar estado si no hay errores
+if (empty($errors) && !empty($apiKey)) {
     $client = new Client();
 
     // Solicitud a /api/messages/{msgId}/info
@@ -92,34 +121,32 @@ if (empty($errors)) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Estado del Mensaje - WaSenderAPI</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .form-container { max-width: 600px; margin: 0 auto; }
-        .error { color: red; }
-        .result { margin-top: 20px; padding: 10px; border: 1px solid #ccc; }
-        a { color: #007bff; text-decoration: none; }
-        a:hover { text-decoration: underline; }
-    </style>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
 </head>
 <body>
-    <div class="form-container">
-        <h2>Estado del Mensaje - WaSenderAPI</h2>
-        
-        <?php if (!empty($errors)): ?>
-            <div class="error">
-                <?php foreach ($errors as $error): ?>
-                    <p><?php echo htmlspecialchars($error); ?></p>
-                <?php endforeach; ?>
+    <div class="container my-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <h2 class="mb-4 text-center">Estado del Mensaje - WaSenderAPI</h2>
+                
+                <?php if (!empty($errors)): ?>
+                    <div class="alert alert-danger" role="alert">
+                        <?php foreach ($errors as $error): ?>
+                            <p class="mb-0"><?php echo htmlspecialchars($error); ?></p>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+                
+                <?php if ($result): ?>
+                    <div class="alert alert-info">
+                        <?php echo $result; ?>
+                    </div>
+                <?php endif; ?>
+                
+                <p class="text-center"><a href="check_messages.php" class="btn btn-secondary">Volver al formulario</a></p>
             </div>
-        <?php endif; ?>
-        
-        <?php if ($result): ?>
-            <div class="result">
-                <?php echo $result; ?>
-            </div>
-        <?php endif; ?>
-        
-        <p><a href="check_messages.php">Volver al formulario</a></p>
+        </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
 </body>
 </html>
