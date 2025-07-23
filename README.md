@@ -13,6 +13,8 @@ En WhatsApp son dos mensajes
 Uno con el logo de la clínica más el mensaje. Otro con archivo adjunto iCalendar
 Eje.: "ical.ics".
 
+Para envio de email, se usan los valores de Administracion/Configuración/Notificaciones, ahi colocar los datos de servidor de correo.
+
 Para envio de WhatsApp se usan 3 empresas
 
  - https://ultramsg.com/ (En Octubre/2023, el valor mensual es de U$S 39.00 por instancia, envios ilimitados).
