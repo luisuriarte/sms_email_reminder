@@ -99,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="container my-5">
         <div class="row justify-content-center">
             <div class="col-md-8">
-                <h2 class="mb-4 text-center">Leer Mensajes Enviados - WaSenderAPI</h2>
+                <h2 class="mb-4 text-center">Leer Mensajes Enviados</h2>
                 <p class="text-muted text-center">Ingresa el número de teléfono (sin +549, sin 15 y sin espacios ni guiones):</p>
 
                 <?php if (!empty($errors)): ?>
@@ -112,7 +112,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <form method="post" class="mb-4">
                     <div class="mb-3">
-                        <label for="phoneNumber" class="form-label">Número de teléfono (sin +549):</label>
                         <input type="text" name="phoneNumber" id="phoneNumber" class="form-control" value="<?php echo htmlspecialchars($phoneNumber); ?>" placeholder="3404540440" pattern="\d{10}" required>
                     </div>
                     <div class="text-center">
