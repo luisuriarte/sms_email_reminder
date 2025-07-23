@@ -52,9 +52,10 @@ logo Wsp y Logo email e deben colocar en los Centros, en campos no utilizados:
 - Email -> Correo Electrónico
 - Attn -> Logo Email
 - Domain_Identifier -> Logo WhatsApp
-- Facility_Npi -> Instancia
+- Facility_Npi -> Instancia / Webhook Secret
 - Facility_Code -> Empresa (WaApi, UltraMSG o WaSenderAPI)
 - Oid -> Clave API
 
-Tanto el email, como el mensaje de WhatsApp va adjunto un archivo .ics (iCalendar), para que el paciente, si quiere lo coloca en su calendario.
+Se esta implementando los scripts check_messages.php y para ver los mensajes enviados desde WSP y check_status.php para ver el estado de cada mensaje.
+Es importante habilitar webhook en los gatway contratados y apuntar donde se encuentra webhook.php.
 
