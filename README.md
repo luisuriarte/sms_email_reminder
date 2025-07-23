@@ -56,3 +56,5 @@ logo Wsp y Logo email e deben colocar en los Centros, en campos no utilizados:
 - Facility_Code -> Empresa (WaApi, UltraMSG o WaSenderAPI)
 - Oid -> Clave API
 
+Tanto el email, como el mensaje de WhatsApp va adjunto un archivo .ics (iCalendar), para que el paciente, si quiere lo coloca en su calendario.
+
