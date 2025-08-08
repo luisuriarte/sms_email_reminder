@@ -79,7 +79,7 @@ use GuzzleHttp\Exception\RequestException;
 function cron_SendWSP(
     $patient_phone, $vBody, $start_date, $end_date, $patient_name, $patient_email, $facility_name,
     $facility_address, $facility_phone, $facility_email, $provider, $facility_url, $facility_vendor,
-    $facility_instance, $facility_logo, $facility_api
+    $facility_instance, $facility_logo, $facility_api, $latitude, $longitude
 ) {
     // Inicializar log para depuración
     $log = [];
@@ -304,7 +304,7 @@ END:VCALENDAR";
             $log[] = "UltraMsg (iCalendar): $response";
         }
 
-    // Proceso para WaSenderApi
+    // Procesar para WaSenderAPI
     } elseif (strtolower($facility_vendor) == "wasenderapi") {
         $ChatId = "+549" . $patient_phone;
         $log[] = "WaSenderAPI: Enviando a $ChatId";
@@ -364,6 +364,42 @@ END:VCALENDAR";
             }
         } catch (RequestException $e) {
             $log[] = "Error en WaSenderAPI (iCalendar): " . $e->getMessage();
+            if ($e->hasResponse()) {
+                $log[] = "Respuesta: " . $e->getResponse()->getBody();
+            }
+        }
+
+        // Retraso de 60 segundos antes de enviar la ubicación (restricción de la versión de prueba)
+        $log[] = "WaSenderAPI: Esperando 60 segundos antes de enviar la ubicación (restricción de la versión de prueba)";
+        sleep(60);
+
+        // Enviar ubicación
+        try {
+            $response = $client->post($url, [
+                'headers' => [
+                    'Authorization' => "Bearer $ApiKey",
+                    'Content-Type' => 'application/json',
+                    'Accept' => 'application/json',
+                ],
+                'json' => [
+                    'to' => $ChatId,
+                    'text' => "Ubicación de $facility_name",
+                    'location' => [
+                        'latitude' => $latitude,
+                        'longitude' => $longitude,
+                        'name' => $facility_name,
+                        'address' => "$facility_address, $facility_name" // Reemplazar con $facility_address si está disponible
+                    ]
+                ]
+            ]);
+            $responseBody = json_decode($response->getBody(), true);
+            $log[] = "WaSenderAPI (ubicación): " . $response->getBody();
+            if ($responseBody['success'] && isset($responseBody['data']['msgId'])) {
+                $result['status'] = 'success';
+                $result['msgId'] = $responseBody['data']['msgId']; // Actualizar msgId con el último mensaje
+            }
+        } catch (RequestException $e) {
+            $log[] = "Error en WaSenderAPI (ubicación): " . $e->getMessage();
             if ($e->hasResponse()) {
                 $log[] = "Respuesta: " . $e->getResponse()->getBody();
             }
