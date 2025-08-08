@@ -107,6 +107,8 @@ for ($p = 0; $p < count($db_patient); $p++) {
     $facility_api = $prow['vendor_api'];
     $facility_logo = $prow['facility_logo_wsp'];
     $provider_name = $prow['user_name'];
+    $latitude = $prow['latitude'];
+    $longitude = $prow['longitude'];
 
     $app_time_hour = round($app_time / 3600);
     $curr_total_hour = round(time() / 3600);

@@ -178,9 +178,134 @@ END:VCALENDAR";
     $headers_ics = @get_headers($url_ics);
     $log[] = "Accesibilidad logo: " . ($headers_logo ? $headers_logo[0] : "No se pudo verificar");
     $log[] = "Accesibilidad .ics: " . ($headers_ics ? $headers_ics[0] : "No se pudo verificar");
+    
+    // Proceso para WaApi
+    if (strtolower($facility_vendor) == "waapi") {
+        $ChatId = "549" . $patient_phone . "@c.us";
+        $log[] = "WaApi: Enviando a $ChatId";
+        $client = new Client();
 
-    // Procesar según el proveedor
-    if (strtolower($facility_vendor) == "wasenderapi") {
+        // Enviar imagen con texto
+        $body_json = json_encode([
+            "chatId" => $ChatId,
+            "mediaUrl" => $url_logo_wsp,
+            "mediaCaption" => $vBody
+        ]);
+
+        try {
+            $response = $client->request('POST', "https://waapi.app/api/v1/instances/$Instance/client/action/send-media", [
+                'body' => $body_json,
+                'headers' => [
+                    'accept' => 'application/json',
+                    'content-type' => 'application/json',
+                    'authorization' => "Bearer $ApiKey",
+                ],
+            ]);
+            $log[] = "WaApi (imagen): " . $response->getBody();
+        } catch (\Exception $e) {
+            $log[] = "Error en WaApi (imagen): " . $e->getMessage();
+            if ($e->hasResponse()) {
+                $log[] = "Respuesta: " . $e->getResponse()->getBody();
+            }
+        }
+
+        // Enviar archivo iCalendar
+        $body_json = json_encode([
+            "chatId" => $ChatId,
+            "mediaUrl" => $url_ics,
+            "mediaName" => "TURNO.ics",
+            "mediaCaption" => "$facility_name: Presione en el adjunto para verificar su turno. Gracias."
+        ]);
+
+        try {
+            $response = $client->request('POST', "https://waapi.app/api/v1/instances/$Instance/client/action/send-media", [
+                'body' => $body_json,
+                'headers' => [
+                    'accept' => 'application/json',
+                    'content-type' => 'application/json',
+                    'authorization' => "Bearer $ApiKey",
+                ],
+            ]);
+            $log[] = "WaApi (iCalendar): " . $response->getBody();
+        } catch (\Exception $e) {
+            $log[] = "Error en WaApi (iCalendar): " . $e->getMessage();
+            if ($e->hasResponse()) {
+                $log[] = "Respuesta: " . $e->getResponse()->getBody();
+            }
+        }
+
+    // Proceso para UltraMsg
+    } elseif (strtolower($facility_vendor) == "ultramsg") {
+        $wsp = "+549" . $patient_phone;
+        $log[] = "UltraMsg: Enviando a $wsp";
+
+        // Enviar imagen con texto
+        $params = [
+            'token' => $ApiKey,
+            'to' => $wsp,
+            'image' => $url_logo_wsp,
+            'caption' => $vBody
+        ];
+        $curl = curl_init();
+        curl_setopt_array($curl, [
+            CURLOPT_URL => "https://api.ultramsg.com/$Instance/messages/image",
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => "",
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_SSL_VERIFYHOST => 0,
+            CURLOPT_SSL_VERIFYPEER => 0,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => "POST",
+            CURLOPT_POSTFIELDS => http_build_query($params),
+            CURLOPT_HTTPHEADER => ["content-type: application/x-www-form-urlencoded"],
+        ]);
+
+        $response = curl_exec($curl);
+        $err = curl_error($curl);
+        curl_close($curl);
+
+        if ($err) {
+            $log[] = "cURL Error (UltraMsg, imagen): $err";
+        } else {
+            $log[] = "UltraMsg (imagen): $response";
+        }
+
+        // Enviar archivo iCalendar
+        $params = [
+            'token' => $ApiKey,
+            'to' => $wsp,
+            'filename' => 'TURNO.ics',
+            'document' => $url_ics,
+            'caption' => "$facility_name: Presione en el adjunto para verificar su turno. Gracias."
+        ];
+        $curl = curl_init();
+        curl_setopt_array($curl, [
+            CURLOPT_URL => "https://api.ultramsg.com/$Instance/messages/document",
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => "",
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_SSL_VERIFYHOST => 0,
+            CURLOPT_SSL_VERIFYPEER => 0,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => "POST",
+            CURLOPT_POSTFIELDS => http_build_query($params),
+            CURLOPT_HTTPHEADER => ["content-type: application/x-www-form-urlencoded"],
+        ]);
+
+        $response = curl_exec($curl);
+        $err = curl_error($curl);
+        curl_close($curl);
+
+        if ($err) {
+            $log[] = "cURL Error (UltraMsg, iCalendar): $err";
+        } else {
+            $log[] = "UltraMsg (iCalendar): $response";
+        }
+
+    // Proceso para WaSenderApi
+    } elseif (strtolower($facility_vendor) == "wasenderapi") {
         $ChatId = "+549" . $patient_phone;
         $log[] = "WaSenderAPI: Enviando a $ChatId";
         $client = new Client();
@@ -305,7 +430,8 @@ function cron_getAlertpatientData($type)
                     pte.status, pt.lastseq, f.name AS facility_name, CONCAT(f.street, ', ', f.city, ', ', f.state)
                     AS facility_address, f.phone AS facility_phone, f.email AS facility_email, f.facility_code AS
                     service_vendor, f.facility_npi AS vendor_instance, f.oid AS vendor_api, f.website AS facility_website,
-                    f.attn AS facility_logo_email, f.domain_identifier AS facility_logo_wsp
+                    f.attn AS facility_logo_email, f.domain_identifier AS facility_logo_wsp, SUBSTRING_INDEX(f.iban, ',', 1) AS latitude,
+                    SUBSTRING_INDEX(f.iban, ',', -1) AS longitude
             FROM openemr_postcalendar_events AS ope
             LEFT OUTER JOIN patient_tracker AS pt ON pt.pid = ope.pc_pid 
             AND pt.apptdate = ope.pc_eventDate 
