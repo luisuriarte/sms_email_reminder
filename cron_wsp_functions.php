@@ -388,7 +388,7 @@ END:VCALENDAR";
                         'latitude' => $latitude,
                         'longitude' => $longitude,
                         'name' => $facility_name,
-                        'address' => "$facility_address, $facility_name" // Reemplazar con $facility_address si está disponible
+                        'address' => "$facility_address, $facility_name" 
                     ]
                 ]
             ]);
@@ -396,7 +396,7 @@ END:VCALENDAR";
             $log[] = "WaSenderAPI (ubicación): " . $response->getBody();
             if ($responseBody['success'] && isset($responseBody['data']['msgId'])) {
                 $result['status'] = 'success';
-                $result['msgId'] = $responseBody['data']['msgId']; // Actualizar msgId con el último mensaje
+                $result['msgId'] = $responseBody['data']['msgId']; 
             }
         } catch (RequestException $e) {
             $log[] = "Error en WaSenderAPI (ubicación): " . $e->getMessage();

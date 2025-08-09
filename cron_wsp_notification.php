@@ -145,7 +145,10 @@ for ($p = 0; $p < count($db_patient); $p++) {
                 $facility_vendor,
                 $facility_instance,
                 $facility_logo,
-                $facility_api
+                $facility_api,
+                $latitude,
+                $longitude
+
             );
 
             // Capture msgId and log from cron_SendWSP
