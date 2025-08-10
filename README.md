@@ -65,6 +65,7 @@ logo Wsp y Logo email e deben colocar en los Centros, en campos no utilizados:
 - Facility_Npi -> Instancia / Webhook Secret
 - Facility_Code -> Empresa (WaApi, UltraMSG o WaSenderAPI)
 - Oid -> Clave API
+- logitud,latitud (IBAN), para enviar mapa. Ej. -31.728311, -61.091834
 
 Se esta implementando los scripts check_messages.php y para ver los mensajes enviados desde WSP y check_status.php para ver el estado de cada mensaje.
 Es importante habilitar webhook en los gatway contratados y apuntar donde se encuentra webhook.php.
