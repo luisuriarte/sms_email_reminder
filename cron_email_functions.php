@@ -72,7 +72,7 @@ function cron_SendMail($patient_email, $cc, $subject, $vBody, $start_date, $end_
         $facilityAddress = htmlspecialchars(trim($facilityAddress)); // Sanitiza para HTML
 
         $zoom = 15;
-        $apiKey = "b9ec3d484da44247a912b9b27ada0d3d"; // clave de Geoapify (opcional, gratuito para uso básico)
+        $apiKey = "my api key"; // clave de Geoapify (opcional, gratuito para uso básico)
 
         // URL del mapa estático usando Geoapify (basado en OpenStreetMap)
         $staticMapUrl = "https://maps.geoapify.com/v1/staticmap?style=osm-carto&width=600&height=300&center=lonlat:{$longitude},{$latitude}&zoom={$zoom}&marker=lonlat:{$longitude},{$latitude};color:red;size:medium&apiKey={$apiKey}";
