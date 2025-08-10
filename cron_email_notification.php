@@ -79,6 +79,8 @@ for ($p = 0; $p < count($db_patient); $p++) {
     $provider_name = $prow['user_name'];
     $provider_preffix = $prow['user_preffix'];
     $logo_email = $prow['facility_logo_email'];
+    $latitude = $prow['latitude'];
+    $longitude = $prow['longitude'];
 
     $app_time_hour = round($app_time / 3600);
     $curr_total_hour = round(time() / 3600);
@@ -109,7 +111,9 @@ for ($p = 0; $p < count($db_patient); $p++) {
             $facility_email,
             $facility_url,
             $provider_name,
-            $logo_email
+            $logo_email,
+            $latitude,
+            $longitude
         );
 
         // insert entry in notification_log table

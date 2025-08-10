@@ -41,7 +41,7 @@ use PHPMailer\PHPMailer\Exception;
 use OpenEMR\Common\Crypto\CryptoGen;
 
 function cron_SendMail($patient_email, $cc, $subject, $vBody, $start_date, $end_date, $patient_name, $facility_name, 
-                        $facility_address, $facility_phone, $facility_email, $facility_url, $provider, $logo_email)
+                        $facility_address, $facility_phone, $facility_email, $facility_url, $provider, $logo_email, $latitude, $longitude)
 {
     // check if smtp globals set
     if ($GLOBALS['SMTP_HOST'] == '') {
@@ -65,6 +65,21 @@ function cron_SendMail($patient_email, $cc, $subject, $vBody, $start_date, $end_
 
         $todaystamp = gmdate("Ymd\THis\Z");
         $zone = $GLOBALS['gbl_time_zone'];
+        // Sanitizar las variables de latitud, longitud, facilityName y facilityAddress
+        $latitude = urlencode(trim($latitude)); // Elimina espacios y codifica para URL
+        $longitude = urlencode(trim($longitude));
+        $facilityName = htmlspecialchars(trim($facilityName)); // Sanitiza para HTML
+        $facilityAddress = htmlspecialchars(trim($facilityAddress)); // Sanitiza para HTML
+
+        $zoom = 15;
+        $apiKey = "b9ec3d484da44247a912b9b27ada0d3d"; // clave de Geoapify (opcional, gratuito para uso básico)
+
+        // URL del mapa estático usando Geoapify (basado en OpenStreetMap)
+        $staticMapUrl = "https://maps.geoapify.com/v1/staticmap?style=osm-carto&width=600&height=300&center=lonlat:{$longitude},{$latitude}&zoom={$zoom}&marker=lonlat:{$longitude},{$latitude};color:red;size:medium&apiKey={$apiKey}";
+
+        // URL para el mapa interactivo en OpenStreetMap
+        $mapLinkUrl = "https://www.openstreetmap.org/?mlat={$latitude}&mlon={$longitude}#map={$zoom}/{$latitude}/{$longitude}";
+
         //$zone = "America/Argentina/Buenos_Aires";
         //Create unique identifier
         $cal_uid = date('Ymd').'T'.date('His')."-".rand().substr($facility_url, 9);
@@ -118,12 +133,24 @@ END:VCALENDAR';
 		$mail->IsHTML(true);
 		$mail->Subject = $subject;
 		$mail->AddEmbeddedImage($logo_email, "logo", "logo.png");
-		$html = <<<EOT
+        $html = <<<EOT
 			<div>
-				<img src="cid:logo"> 
+				<img src="cid:logo"> 
 				<p>$vBody</p>
-			</div>
-		EOT;
+        <p>$facility_name $facility_address</p>
+        <a href='{$mapLinkUrl}'>
+        <img src='{$staticMapUrl}' alt='Mapa de la ubicación'>
+        </a>
+        <p>Haz clic en la imagen para ver el mapa interactivo.</p>
+        </div>
+EOT;
+// Para enviar el contenido HTML y el iCal adjunto sin el mapa de la clinica, comentar el anterior $html y descomentar estas lineas:
+//		$html = <<<EOT
+//			<div>
+//				<img src="cid:logo"> 
+//				<p>$vBody</p>
+//			</div>
+//EOT;
 		$mail->Body = $html;
         $mail->Ical = $ical_content;
 		$mail->AddStringAttachment($ical_content, "ical.ics", "base64", "text/calendar; charset=utf-8; method=REQUEST");
@@ -240,7 +267,8 @@ function cron_getAlertpatientData($type)
                     pte.status, pt.lastseq, f.name AS facility_name, CONCAT(f.street, ', ', f.city, ', ', f.state)
                     AS facility_address, f.phone AS facility_phone, f.email AS facility_email, f.facility_code AS
                     service_vendor, f.facility_npi AS vendor_instance, f.oid AS vendor_api, f.website AS facility_website,
-                    f.attn AS facility_logo_email, f.domain_identifier AS facility_logo_wsp 
+                    f.attn AS facility_logo_email, f.domain_identifier AS facility_logo_wsp, SUBSTRING_INDEX(f.iban, ',', 1) AS latitude,
+                    SUBSTRING_INDEX(f.iban, ',', -1) AS longitude
             FROM openemr_postcalendar_events AS ope
             LEFT OUTER JOIN patient_tracker AS pt ON pt.pid = ope.pc_pid 
             AND pt.apptdate = ope.pc_eventDate 

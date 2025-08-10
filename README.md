@@ -9,9 +9,17 @@ Son 2 archivos que se ejecutan mediante cron:
 - php cron_wsp_notification_esp.php  WhatsApp en Español (Fecha, hora y días).
 
 En los email, se envia mensaje con logo más archivo de invitación iCalendar "ical.ics".
+Por defecto se envia con el correo la ubicación de la clínica con Geoapify + OpenStreetMaps. Es necesario crear una Clave API Geoapify:
+Crear una cuenta y registrarse en Geoapify: Si no tienes una cuenta, visita la página de MyProjects de Geoapify y crea una. 
+Crear un nuevo proyecto: Una vez registrado, crea un nuevo proyecto en la plataforma. 
+Acceder a la sección de claves API: Dentro de tu proyecto, navega a la sección de "API Keys". 
+Obtener la clave API: La clave API se genera automáticamente en esta sección. Puedes copiarla
+Si no se quiere usar Mapas en el código de cron_email_functions.php esta detallado que comentar y descomentar.
+
 En WhatsApp son dos mensajes
 Uno con el logo de la clínica más el mensaje. Otro con archivo adjunto iCalendar
 Eje.: "ical.ics".
+Si se usa WaSenderApi, se envia, ademas, un mapa con la ubicación de la clinica (tambien esta la opcion de no enviar mapa comentando el código cron_wsp_functions.php).
 
 Para envio de email, se usan los valores de Administracion/Configuración/Notificaciones, ahi colocar los datos de servidor de correo.
 

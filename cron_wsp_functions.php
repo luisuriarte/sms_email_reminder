@@ -304,7 +304,7 @@ END:VCALENDAR";
             $log[] = "UltraMsg (iCalendar): $response";
         }
 
-    // Procesar para WaSenderAPI
+    // Proceso para WaSenderAPI
     } elseif (strtolower($facility_vendor) == "wasenderapi") {
         $ChatId = "+549" . $patient_phone;
         $log[] = "WaSenderAPI: Enviando a $ChatId";
@@ -373,7 +373,7 @@ END:VCALENDAR";
         $log[] = "WaSenderAPI: Esperando 60 segundos antes de enviar la ubicación (restricción de la versión de prueba)";
         sleep(60);
 
-        // Enviar ubicación
+        // Enviar ubicación (Si no quieres enviar mapa comenta este try completo)
         try {
             $response = $client->post($url, [
                 'headers' => [
