@@ -65,7 +65,7 @@ function cron_SendMail($patient_email, $cc, $subject, $vBody, $start_date, $end_
         $zone = isset($GLOBALS['gbl_time_zone']) ? $GLOBALS['gbl_time_zone'] : 'America/Argentina/Buenos_Aires';
 
         $zoom = 15;
-        $apiKey = "b9ec3d484da44247a912b9b27ada0d3d"; // Clave de Geoapify
+        $apiKey = "tu-api-key"; // Clave de Geoapify
 
         // Validar que las variables clave no estén vacías
         if (empty($latitude) || empty($longitude) || empty($apiKey) || empty($patient_email)) {
