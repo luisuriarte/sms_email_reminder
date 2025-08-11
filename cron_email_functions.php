@@ -21,14 +21,6 @@ global $zone;
 global $SMS_NOTIFICATION_HOUR;
 global $EMAIL_NOTIFICATION_HOUR;
 
-////////////////////////////////////////////////////////////////////
-// Function:    dateToCal
-// Purpose: Fecha a formato iCalendar
-////////////////////////////////////////////////////////////////////
-function dateToCal($timestamp) {
-    return date('Ymd\THis', strtotime($timestamp));
-}
-
 //require_once("../../globals.php");
 ////////////////////////////////////////////////////////////////////
 // Function:    cron_SendMail
@@ -37,18 +29,14 @@ function dateToCal($timestamp) {
 // Output:  status - if sent or not
 ////////////////////////////////////////////////////////////////////
 use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
 use OpenEMR\Common\Crypto\CryptoGen;
 
 function cron_SendMail($patient_email, $cc, $subject, $vBody, $start_date, $end_date, $patient_name, $facility_name, 
-                        $facility_address, $facility_phone, $facility_email, $facility_url, $provider, $logo_email, $latitude, $longitude)
+                      $facility_address, $facility_phone, $facility_email, $facility_url, $provider, $logo_email, $latitude, $longitude)
 {
-    // check if smtp globals set
+    // Check if SMTP globals are set
     if ($GLOBALS['SMTP_HOST'] == '') {
-
-        $mstatus = true;
         $mstatus = @mail($patient_email, $cc, $subject, $vBody);
-        
     } else {
         
         if (!class_exists("SMTP")) {
@@ -57,104 +45,212 @@ function cron_SendMail($patient_email, $cc, $subject, $vBody, $start_date, $end_
 			$SenderEmail = $GLOBALS['patient_reminder_sender_email'];
             if (!class_exists('PHPMailer\PHPMailer\PHPMailer'))
 		{
-		    require (__DIR__ . "/../../library/classes/PHPMailer/src/Exception.php");
 		    require (__DIR__ . "/../../library/classes/PHPMailer/src/PHPMailer.php");
 		    require (__DIR__ . "/../../library/classes/PHPMailer/src/SMTP.php");
 		}
         }
 
-        $todaystamp = gmdate("Ymd\THis\Z");
-        $zone = $GLOBALS['gbl_time_zone'];
-        // Sanitizar las variables de latitud, longitud, facilityName y facilityAddress
-        $latitude = urlencode(trim($latitude)); // Elimina espacios y codifica para URL
+        // Sanitizar las variables
+        $latitude = urlencode(trim($latitude));
         $longitude = urlencode(trim($longitude));
-        $facilityName = htmlspecialchars(trim($facilityName)); // Sanitiza para HTML
-        $facilityAddress = htmlspecialchars(trim($facilityAddress)); // Sanitiza para HTML
+        $facility_name = htmlspecialchars(trim($facility_name), ENT_QUOTES, 'UTF-8');
+        $facility_address = htmlspecialchars(trim($facility_address), ENT_QUOTES, 'UTF-8');
+        $patient_name = htmlspecialchars(trim($patient_name), ENT_QUOTES, 'UTF-8');
+        $patient_email = htmlspecialchars(trim($patient_email), ENT_QUOTES, 'UTF-8');
+        $facility_email = htmlspecialchars(trim($facility_email), ENT_QUOTES, 'UTF-8');
+        $facility_phone = htmlspecialchars(trim($facility_phone), ENT_QUOTES, 'UTF-8');
+        $facility_url = htmlspecialchars(trim($facility_url), ENT_QUOTES, 'UTF-8');
+        $vBody = htmlspecialchars(trim($vBody), ENT_QUOTES, 'UTF-8');
+        $subject = htmlspecialchars(trim($subject), ENT_QUOTES, 'UTF-8');
+        $zone = isset($GLOBALS['gbl_time_zone']) ? $GLOBALS['gbl_time_zone'] : 'America/Argentina/Buenos_Aires';
 
         $zoom = 15;
-        $apiKey = "my api key"; // clave de Geoapify (opcional, gratuito para uso básico)
+        $apiKey = "b9ec3d484da44247a912b9b27ada0d3d"; // Clave de Geoapify
 
-        // URL del mapa estático usando Geoapify (basado en OpenStreetMap)
-        $staticMapUrl = "https://maps.geoapify.com/v1/staticmap?style=osm-carto&width=600&height=300&center=lonlat:{$longitude},{$latitude}&zoom={$zoom}&marker=lonlat:{$longitude},{$latitude};color:red;size:medium&apiKey={$apiKey}";
+        // Validar que las variables clave no estén vacías
+        if (empty($latitude) || empty($longitude) || empty($apiKey) || empty($patient_email)) {
+            echo "Error: Variables requeridas están vacías.\n";
+            echo "Latitude: $latitude\n";
+            echo "Longitude: $longitude\n";
+            echo "FacilityName: $facility_name\n";
+            echo "Patient Email: $patient_email\n";
+            echo "API Key: $apiKey\n";
+            $mstatus = false;
+            return $mstatus;
+        }
 
+        // Construir la URL del mapa estático con Geoapify (sin texto en el marcador)
+        $baseUrl = "https://maps.geoapify.com/v1/staticmap";
+        $params = [
+            'style' => 'osm-carto',
+            'width' => 600,
+            'height' => 300,
+            'center' => "lonlat:$longitude,$latitude",
+            'zoom' => $zoom,
+            'marker' => "lonlat:$longitude,$latitude;color:red;size:medium",
+            'apiKey' => $apiKey
+        ];
+        $staticMapUrl = $baseUrl . '?' . http_build_query($params);
         // URL para el mapa interactivo en OpenStreetMap
         $mapLinkUrl = "https://www.openstreetmap.org/?mlat={$latitude}&mlon={$longitude}#map={$zoom}/{$latitude}/{$longitude}";
 
-        //$zone = "America/Argentina/Buenos_Aires";
-        //Create unique identifier
-        $cal_uid = date('Ymd').'T'.date('His')."-".rand().substr($facility_url, 9);
+        // Función para escapar caracteres en iCalendar
+        function escapeIcalValue($value) {
+            $value = str_replace(["\\", "\n", "\r", ",", ";"], ["\\\\", "\\n", "", "\\,", "\\;"], $value);
+            return $value;
+        }
 
-		//Create ICAL Content (Google rfc 2445 for details and examples of usage)
-		$ical_content = 'BEGIN:VCALENDAR
-METHOD:REQUEST
-PRODID:-//Microsoft Corporation//Outlook 11.0 MIMEDIR//EN
+        // Función para formatear fechas en iCalendar
+        function dateToCal($timestamp) {
+            return date('Ymd\THis', strtotime($timestamp));
+        }
+
+        // Función para plegar líneas largas (line folding) según RFC 5545 con soporte UTF-8
+        function foldIcalContent($content) {
+            $lines = explode("\r\n", $content);
+            $folded = [];
+            foreach ($lines as $line) {
+                while (mb_strlen($line, 'UTF-8') > 75) {
+                    $folded[] = mb_substr($line, 0, 75, 'UTF-8');
+                    $line = ' ' . mb_substr($line, 75, mb_strlen($line, 'UTF-8'), 'UTF-8');
+                }
+                $folded[] = $line;
+            }
+            return implode("\r\n", $folded);
+        }
+
+        // Escapar valores para el archivo .ics
+        $facility_name_escaped = escapeIcalValue($facility_name);
+        $facility_address_escaped = escapeIcalValue($facility_address);
+        $vBody_escaped = escapeIcalValue($vBody);
+        $patient_name_escaped = escapeIcalValue($patient_name);
+        $patient_email_escaped = escapeIcalValue($patient_email);
+        $facility_email_escaped = escapeIcalValue($facility_email);
+        $facility_phone_escaped = escapeIcalValue($facility_phone);
+        $facility_url_escaped = escapeIcalValue($facility_url);
+
+        // Generar fechas para el evento
+        $todaystamp = gmdate('Ymd\THis\Z'); // UTC
+        $cal_uid = gmdate('Ymd\THis') . "-" . rand() . "@example.com";
+        $dtstart = dateToCal($start_date); // Ejemplo: 20250813T091500
+        $dtend = dateToCal($end_date); // Ejemplo: 20250813T093000
+
+        // Definir el componente VTIMEZONE para America/Argentina/Buenos_Aires
+        $vtimezone = <<<EOT
+BEGIN:VTIMEZONE
+TZID:America/Argentina/Buenos_Aires
+BEGIN:STANDARD
+TZOFFSETFROM:-0300
+TZOFFSETTO:-0300
+TZNAME:ART
+DTSTART:19700101T000000
+END:STANDARD
+END:VTIMEZONE
+EOT;
+
+        // Usar METHOD:PUBLISH por defecto para que Gmail lo muestre
+        $method = "PUBLISH"; // Cambia a "REQUEST" si necesitas RSVPs
+
+        // Generar el contenido del archivo .ics
+        $ical_content = <<<EOT
+BEGIN:VCALENDAR
 VERSION:2.0
+PRODID:-//TuOrganizacion//Evento//EN
+METHOD:$method
+$vtimezone
 BEGIN:VEVENT
-DTSTART;TZID=' . $zone . ':' . dateToCal($start_date) . '
-DTEND;TZID=' . $zone . ':' . dateToCal($end_date) . '
-LOCATION:' . $facility_address . '
-TRANSP:OPAQUE
-SEQUENCE:0
-UID:' . $cal_uid . '
-ORGANIZER;CN=' . $facility_name . ':mailto:' . $facility_email . '
-ATTENDEE;PARTSTAT=ACCEPTED;CN=' . $patient_name . ';EMAIL=' . $patient_email . ':mailto:' . $patient_email . '
-CONTACT:' . $facility_name . '\, ' . $facility_phone . '\, ' . $facility_email . '
-DTSTAMP:' . $todaystamp . '
-SUMMARY:Turno en ' . $facility_name . '
-DESCRIPTION:' . $vBody . '
-URL;VALUE=URI:' . $facility_url . '
-PRIORITY:5
+DTSTART;TZID=$zone:$dtstart
+DTEND;TZID=$zone:$dtend
+DTSTAMP:$todaystamp
+UID:$cal_uid
+SUMMARY:$facility_name_escaped
+DESCRIPTION:$vBody_escaped
+LOCATION:$facility_address_escaped
+URL:$facility_url_escaped
+ORGANIZER;CN=$facility_name_escaped:mailto:$facility_email_escaped
+ATTENDEE;PARTSTAT=NEEDS-ACTION;CN=' . str_replace(',', '\,', $patient_name) . ';EMAIL=' . $patient_email . ':mailto:' . $patient_email . '
+CONTACT:$facility_name_escaped\, $facility_phone_escaped\, $facility_email_escaped
 CLASS:PUBLIC
-BEGIN:VALARM
-TRIGGER:-PT60M
-REPEAT:1
-DURATION:PT30M
-ACTION:DISPLAY
-END:VALARM
+PRIORITY:5
+TRANSP:OPAQUE
+STATUS:CONFIRMED
+SEQUENCE:0
 END:VEVENT
-END:VCALENDAR';
- 		
-    	$mail = new PHPMailer();
-		$mail->SMTPDebug = 3;
-		$mail->IsSMTP();
-		$mail->Host = $GLOBALS['SMTP_HOST'];
-		$mail->Port = $GLOBALS['SMTP_PORT'];
-		$mail->SMTPAuth = true;
-		$mail->Username = $GLOBALS['SMTP_USER'];
-		$cryptoGen = new CryptoGen();
-		$mail->Password = $cryptoGen->decryptStandard($GLOBALS['SMTP_PASS']);
-		$mail->SMTPSecure = $GLOBALS['SMTP_SECURE'];
-    	$mail->CharSet = "UTF-8";
-		$mail->From = $facility_email;
-		$mail->FromName = $facility_name;
-		$mail->AddAddress($patient_email);
-		// $mail->addCC($cc); //Remove comment to send, also to trusted mail
-		$mail->WordWrap = 50;
-		$mail->IsHTML(true);
-		$mail->Subject = $subject;
-		$mail->AddEmbeddedImage($logo_email, "logo", "logo.png");
+END:VCALENDAR
+EOT;
+
+        // Aplicar plegado de líneas
+        $ical_content = foldIcalContent($ical_content);
+
+        // Depurar el contenido del .ics
+        //echo "iCal Content:\n" . $ical_content . "\n";
+
+        // Generar un enlace a Google Calendar
+        $eventTitle = urlencode("Turno en $facility_name");
+        $eventDetails = urlencode($vBody_escaped);
+        $eventStart = dateToCal($start_date);
+        $eventEnd = dateToCal($end_date);
+        $googleCalendarUrl = "https://www.google.com/calendar/render?action=TEMPLATE&text=$eventTitle&dates=$eventStart/$eventEnd&details=$eventDetails&location=" . urlencode($facility_address_escaped);
+
+        // Generar datos estructurados JSON-LD
+        $jsonLd = json_encode([
+            "@context" => "http://schema.org",
+            "@type" => "Event",
+            "name" => "Turno en $facility_name",
+            "startDate" => date('c', strtotime($start_date)),
+            "endDate" => date('c', strtotime($end_date)),
+            "location" => [
+                "@type" => "Place",
+                "name" => $facility_name,
+                "address" => $facility_address
+            ],
+            "description" => $vBody
+        ], JSON_UNESCAPED_UNICODE);
+
+        // Configurar PHPMailer
+        $mail = new PHPMailer();
+        $mail->SMTPDebug = 3;
+        $mail->IsSMTP();
+        $mail->Host = $GLOBALS['SMTP_HOST'];
+        $mail->Port = $GLOBALS['SMTP_PORT'];
+        $mail->SMTPAuth = true;
+        $mail->Username = $GLOBALS['SMTP_USER'];
+        $cryptoGen = new CryptoGen();
+        $mail->Password = $cryptoGen->decryptStandard($GLOBALS['SMTP_PASS']);
+        $mail->SMTPSecure = $GLOBALS['SMTP_SECURE'];
+        $mail->CharSet = "UTF-8";
+        $mail->From = $facility_email;
+        $mail->FromName = $facility_name;
+        $mail->AddAddress($patient_email);
+        // $mail->AddCC($cc); // Remove comment to send, also to trusted mail
+        $mail->WordWrap = 50;
+        $mail->IsHTML(true);
+        $mail->Subject = $subject;
+        $mail->AddEmbeddedImage($logo_email, "logo", "logo.png");
+        $mail->AddCustomHeader("Content-Class: urn:content-classes:calendarmessage");
+
         $html = <<<EOT
-			<div>
-				<img src="cid:logo"> 
-				<p>$vBody</p>
+            <div>
+                <img src="cid:logo"> 
+                <p>$vBody</p>
         <p>$facility_name $facility_address</p>
+        <p><a href="$googleCalendarUrl">Agregar a Google Calendar</a></p>
         <a href='{$mapLinkUrl}'>
         <img src='{$staticMapUrl}' alt='Mapa de la ubicación'>
         </a>
         <p>Haz clic en la imagen para ver el mapa interactivo.</p>
-        </div>
+        <p>Descarga el archivo adjunto (calendar.ics) e impórtalo en Google Calendar si no ves los detalles del evento.</p>
+        <script type="application/ld+json">
+            $jsonLd
+        </script>
+            </div>
 EOT;
-// Para enviar el contenido HTML y el iCal adjunto sin el mapa de la clinica, comentar el anterior $html y descomentar estas lineas:
-//		$html = <<<EOT
-//			<div>
-//				<img src="cid:logo"> 
-//				<p>$vBody</p>
-//			</div>
-//EOT;
-		$mail->Body = $html;
-        $mail->Ical = $ical_content;
-		$mail->AddStringAttachment($ical_content, "ical.ics", "base64", "text/calendar; charset=utf-8; method=REQUEST");
-		if(!$mail->send()) {
+        $mail->Body = $html;
+
+        // Adjuntar el .ics con base64 para compatibilidad
+        $mail->AddStringAttachment($ical_content, "calendar.ics", "base64", "text/calendar; charset=utf-8; method=$method");
+
+        if(!$mail->send()) {
             echo "No se puede enviar mensaje a " . text($patient_email) . ".\nError: " . text($mail->ErrorInfo) . "\n";
             $mstatus = false;
         } else {
